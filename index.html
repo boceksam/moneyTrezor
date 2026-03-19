@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trezor výdajů</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="money-layer" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <main class="center">
+    <section class="card" role="region" aria-label="Přihlášení">
+      <header class="card-header">
+        <div class="logo" aria-hidden="true">₿</div>
+        <h1 class="title">Trezor výdajů</h1>
+        <p class="subtitle">Přihlášení do aplikace</p>
+      </header>
+
+      <form class="form" id="authForm">
+        <label class="field">
+          <span>Email</span>
+          <input
+            id="emailInput"
+            type="email"
+            placeholder="mámMáloPenez@gmail.com"
+            autocomplete="email"
+            required
+          />
+        </label>
+
+        <label class="field">
+          <span>Heslo</span>
+          <input
+            id="passwordInput"
+            type="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </label>
+
+        <button class="btn" type="submit">
+          <span class="btn-glow" aria-hidden="true"></span>
+          Přihlásit se
+        </button>
+
+        <div class="meta">
+          <button type="button" id="registerBtn" class="register-btn">
+            <span class="register-btn-shine" aria-hidden="true"></span>
+            Registrovat
+          </button>
+          <span class="dot" aria-hidden="true">•</span>
+          <button id="forgotBtn" class="link" type="button">Zapomenuté heslo</button>
+        </div>
+      </form>
+
+      <p id="authMessage" class="auth-message"></p>
+    </section>
+  </main>
+
+  <script src="money.js"></script>
+  <script>
+    const USERS_KEY = "trezor_vydaju_users";
+    const SESSION_KEY = "trezor_vydaju_session";
+
+    function getUsers() {
+      try {
+        return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    }
+
+    function setSession(user) {
+      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+    }
+
+    function showMessage(text, type = "info") {
+      const el = document.getElementById("authMessage");
+      if (!el) return;
+      el.textContent = text;
+      el.className = "auth-message " + type;
+    }
+
+    function normalizeEmail(email) {
+      return email.trim().toLowerCase();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const existingSession = localStorage.getItem(SESSION_KEY);
+      if (existingSession) {
+        window.location.href = "dashboard.html";
+        return;
+      }
+
+      const authForm = document.getElementById("authForm");
+      const emailInput = document.getElementById("emailInput");
+      const passwordInput = document.getElementById("passwordInput");
+      const registerBtn = document.getElementById("registerBtn");
+      const forgotBtn = document.getElementById("forgotBtn");
+
+      authForm?.addEventListener("submit", (event) => {
+        event.preventDefault();
+
+        const email = normalizeEmail(emailInput?.value || "");
+        const password = (passwordInput?.value || "").trim();
+
+        if (!email || !password) {
+          showMessage("Vyplň email a heslo.", "error");
+          return;
+        }
+
+        const users = getUsers();
+        const user = users.find(u => u.email === email && u.password === password);
+
+        if (!user) {
+          showMessage("Neplatný email nebo heslo.", "error");
+          return;
+        }
+
+        setSession({
+          id: user.id,
+          email: user.email,
+          name: user.name || ""
+        });
+
+        showMessage("Přihlášení proběhlo úspěšně.", "success");
+
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 500);
+      });
+
+      registerBtn?.addEventListener("click", () => {
+        const email = normalizeEmail(emailInput?.value || "");
+        const password = (passwordInput?.value || "").trim();
+
+        if (!email || !password) {
+          showMessage("Pro registraci nejdřív vyplň email a heslo.", "error");
+          return;
+        }
+
+        if (password.length < 4) {
+          showMessage("Heslo musí mít alespoň 4 znaky.", "error");
+          return;
+        }
+
+        const users = getUsers();
+        const exists = users.some(u => u.email === email);
+
+        if (exists) {
+          showMessage("Tento účet už existuje. Zkus se přihlásit.", "error");
+          return;
+        }
+
+        const newUser = {
+          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+          email,
+          password,
+          name: email.split("@")[0]
+        };
+
+        users.push(newUser);
+        saveUsers(users);
+
+        showMessage("Registrace proběhla úspěšně. Teď se můžeš přihlásit.", "success");
+      });
+
+      forgotBtn?.addEventListener("click", () => {
+        showMessage(
+          "Lokální verze zatím obnovu hesla nepodporuje. Použij registrovaný email a heslo.",
+          "info"
+        );
+      });
+    });
+  </script>
+  <script src="money.js"></script>
+</body>
+</html>

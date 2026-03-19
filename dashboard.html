@@ -1,0 +1,578 @@
+﻿<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trezor výdajů</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="dashboard-bg-orb dashboard-bg-orb-1"></div>
+  <div class="dashboard-bg-orb dashboard-bg-orb-2"></div>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Finance dashboard</p>
+        <h1>Trezor výdajů</h1>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="themeToggle" class="btn btn-ghost btn-small theme-toggle-btn" type="button">
+          <span id="themeToggleIcon">🌙</span>
+          <span id="themeToggleText">Tmavý režim</span>
+        </button>
+
+        <button id="exportPdfBtn" class="btn btn-gold btn-small" type="button">Export PDF</button>
+        <button id="annualReportBtn" class="btn btn-ghost btn-small" type="button">Roční přehled</button>
+        <button id="logoutBtn" class="btn btn-danger btn-small" type="button">Odhlásit se</button>
+      </div>
+    </header>
+
+    <section class="glass-card month-bar">
+      <button id="prevMonthBtn" class="month-nav-btn" type="button">←</button>
+      <div class="month-center">
+        <p>Aktuálně zvolený měsíc</p>
+        <h2 id="currentMonthLabel">-</h2>
+      </div>
+      <button id="nextMonthBtn" class="month-nav-btn" type="button">→</button>
+    </section>
+
+    <section class="glass-card month-calendar-card">
+      <div class="section-head compact-head month-calendar-head">
+        <div>
+          <h2>Kalendář měsíce</h2>
+        </div>
+        <div class="month-calendar-legend">
+          <span><i class="legend-dot income-dot"></i>Příjem</span>
+          <span><i class="legend-dot expense-dot"></i>Výdaj</span>
+          <span><i class="legend-dot mixed-dot"></i>Kombinace</span>
+        </div>
+      </div>
+
+      <div class="month-calendar-weekdays" id="monthCalendarWeekdays"></div>
+      <div class="month-calendar-grid" id="monthCalendarGrid"></div>
+    </section>
+
+    <section class="kpi-grid">
+      <article class="glass-card kpi-card income-kpi">
+        <span>Příjmy</span>
+        <strong id="incomeKpi">0 Kč</strong>
+        <small id="incomeCompare">Oproti minulému měsíci: 0 %</small>
+      </article>
+
+      <article class="glass-card kpi-card expense-kpi">
+        <span>Výdaje</span>
+        <strong id="expenseKpi">0 Kč</strong>
+        <small id="expenseCompare">Oproti minulému měsíci: 0 %</small>
+      </article>
+
+      <article class="glass-card kpi-card balance-kpi">
+        <span>Zůstatek</span>
+        <strong id="balanceKpi">0 Kč</strong>
+        <small id="balanceCompare">Oproti minulému měsíci: 0 %</small>
+      </article>
+    </section>
+
+    <section class="glass-card quick-add-card quick-add-card-v3">
+      <div class="quick-add-topline"></div>
+      <div class="quick-add-float quick-add-float-1"></div>
+      <div class="quick-add-float quick-add-float-2"></div>
+
+      <div class="section-head compact-head quick-add-head-v3">
+        <div>
+          <h2>Rychlé přidání</h2>
+        </div>
+        <div class="quick-add-badge-v3">Smart add</div>
+      </div>
+
+      <form id="quickTransactionForm" class="quick-add-form quick-add-form-v3">
+        <div class="quick-type-switch quick-type-switch-v3" id="quickTypeSwitch">
+          <button type="button" class="type-switch-btn type-switch-expense active" data-type="expense">Výdaj</button>
+          <button type="button" class="type-switch-btn type-switch-income" data-type="income">Příjem</button>
+          <button type="button" class="type-switch-btn type-switch-investment" data-type="investment">Investice</button>
+        </div>
+
+        <input type="hidden" id="transactionType" value="expense" />
+
+        <div class="quick-grid-v3">
+          <div class="form-group quick-category">
+            <label for="transactionCategory">Kategorie</label>
+            <select id="transactionCategory">
+              <option value="">Vyber kategorii</option>
+              <option value="Bydlení">Bydlení</option>
+              <option value="Jídlo">Jídlo</option>
+              <option value="Doprava">Doprava</option>
+              <option value="Zdraví">Zdraví</option>
+              <option value="Účty">Účty</option>
+              <option value="Zábava">Zábava</option>
+              <option value="Restaurace">Restaurace</option>
+              <option value="Cestování">Cestování</option>
+              <option value="Spoření">Spoření</option>
+              <option value="Investice">Investice</option>
+              <option value="Desátky">Desátky</option>
+              <option value="Ostatní">Ostatní</option>
+            </select>
+          </div>
+
+          <div class="form-group quick-title">
+            <label for="transactionTitle">Název</label>
+            <input type="text" id="transactionTitle" placeholder="Např. Potraviny" />
+          </div>
+
+          <div class="form-group quick-amount">
+            <label for="transactionAmount">Částka</label>
+            <input type="number" id="transactionAmount" placeholder="0" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group quick-date">
+            <label for="transactionDate">Datum</label>
+            <input type="date" id="transactionDate" />
+          </div>
+
+          <div class="form-group quick-note">
+            <label for="transactionNote">Poznámka</label>
+            <input type="text" id="transactionNote" placeholder="Volitelná poznámka..." />
+          </div>
+
+          <div class="quick-form-footer">
+            <div class="quick-category-chips" id="quickCategoryChips">
+              <button type="button" class="quick-category-chip" data-category="Jídlo">Jídlo</button>
+              <button type="button" class="quick-category-chip" data-category="Doprava">Doprava</button>
+              <button type="button" class="quick-category-chip" data-category="Bydlení">Bydlení</button>
+              <button type="button" class="quick-category-chip" data-category="Restaurace">Restaurace</button>
+              <button type="button" class="quick-category-chip" data-category="Zábava">Zábava</button>
+            </div>
+
+            <div class="quick-footer-actions">
+              <button type="reset" class="btn btn-ghost btn-small">Vyčistit</button>
+              <button type="submit" class="btn btn-gold btn-small">Přidat</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </section>
+
+    <section class="analytics-grid top-analytics-grid">
+      <article class="glass-card ratio-card premium-chart-card premium-chart-card-main">
+        <div class="section-head compact-head">
+          <div>
+            <h2>Pravidlo 48 / 26 / 16 / 10</h2>
+          </div>
+        </div>
+
+        <div class="ratio-layout">
+          <div class="ratio-donut-wrap">
+            <canvas id="ratioRuleChart"></canvas>
+          </div>
+
+          <div class="ratio-breakdown">
+            <div class="ratio-row ratio-needs">
+              <div class="ratio-row-top">
+                <span>48 % · Životní náklady</span>
+                <strong id="ratioNeedsValue">0 Kč</strong>
+              </div>
+              <div class="mini-progress"><div id="ratioNeedsBar" class="mini-progress-fill"></div></div>
+              <small id="ratioNeedsMeta">Skutečnost: 0 Kč</small>
+            </div>
+
+            <div class="ratio-row ratio-fun">
+              <div class="ratio-row-top">
+                <span>26 % · Volný čas</span>
+                <strong id="ratioFunValue">0 Kč</strong>
+              </div>
+              <div class="mini-progress"><div id="ratioFunBar" class="mini-progress-fill"></div></div>
+              <small id="ratioFunMeta">Skutečnost: 0 Kč</small>
+            </div>
+
+            <div class="ratio-row ratio-savings">
+              <div class="ratio-row-top">
+                <span>16 % · Úspory / investice</span>
+                <strong id="ratioSavingsValue">0 Kč</strong>
+              </div>
+              <div class="mini-progress"><div id="ratioSavingsBar" class="mini-progress-fill"></div></div>
+              <small id="ratioSavingsMeta">Skutečnost: 0 Kč</small>
+            </div>
+
+            <div class="ratio-row ratio-tithe">
+              <div class="ratio-row-top">
+                <span>10 % · Desátky</span>
+                <strong id="ratioTitheValue">0 Kč</strong>
+              </div>
+              <div class="mini-progress"><div id="ratioTitheBar" class="mini-progress-fill"></div></div>
+              <small id="ratioTitheMeta">Skutečnost: 0 Kč</small>
+            </div>
+
+            <div class="ratio-status" id="ratioStatusText">
+              Přehled rozdělení zatím není k dispozici.
+            </div>
+            <div class="ratio-recommendation hidden" id="ratioRecommendation"></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="glass-card chart-card premium-chart-card premium-chart-card-side">
+        <div class="section-head">
+          <div>
+            <h2>Struktura výdajů</h2>
+          </div>
+        </div>
+        <div class="expense-donut-layout">
+          <div class="canvas-wrap expense-donut-wrap">
+            <canvas id="expenseDonutChart"></canvas>
+          </div>
+          <div>
+            <div class="expense-donut-legend" id="expenseDonutLegend"></div>
+            <div class="expense-donut-highlights" id="expenseDonutHighlights"></div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="dashboard-grid comparison-under-charts">
+      <article class="glass-card chart-card premium-chart-card">
+        <div class="section-head">
+          <div>
+            <h2>Měsíční srovnání</h2>
+          </div>
+        </div>
+        <div class="comparison-list" id="comparisonList"></div>
+      </article>
+
+      <article class="glass-card chart-card premium-chart-card premium-line-card">
+        <div class="section-head">
+          <div>
+            <h2>Vývoj zůstatku</h2>
+          </div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="balanceChart"></canvas>
+        </div>
+      </article>
+    </section>
+
+    <section class="glass-card budgets-card budgets-card-compact">
+      <div class="section-head compact-head budgets-head-compact">
+        <div>
+          <h2>Rozpočty kategorií</h2>
+        </div>
+      </div>
+
+      <form id="budgetForm" class="budget-form budget-form-compact">
+        <input type="hidden" id="budgetOriginalCategory" value="" />
+        <div class="budget-toolbar">
+          <div class="form-group budget-field">
+            <label for="budgetCategory">Kategorie</label>
+            <select id="budgetCategory">
+              <option value="Bydlení">Bydlení</option>
+              <option value="Jídlo">Jídlo</option>
+              <option value="Doprava">Doprava</option>
+              <option value="Zdraví">Zdraví</option>
+              <option value="Účty">Účty</option>
+              <option value="Zábava">Zábava</option>
+              <option value="Restaurace">Restaurace</option>
+              <option value="Cestování">Cestování</option>
+              <option value="Ostatní">Ostatní</option>
+            </select>
+          </div>
+
+          <div class="form-group budget-field budget-limit-field">
+            <label for="budgetLimit">Měsíční limit</label>
+            <input id="budgetLimit" type="number" min="0" step="0.01" placeholder="Např. 5000" />
+          </div>
+
+          <div class="budget-actions">
+            <button id="budgetSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit limit</button>
+          </div>
+        </div>
+      </form>
+
+      <div id="budgetsList" class="budgets-list budgets-list-compact"></div>
+    </section>
+
+    <section class="dashboard-grid enhancements-grid">
+      <article class="glass-card goals-card">
+        <div class="section-head compact-head">
+          <div>
+            <h2>Finanční cíle</h2>
+          </div>
+          <div class="quick-add-badge-v3">Growth</div>
+        </div>
+
+        <form id="goalForm" class="goal-form">
+          <input type="hidden" id="goalId" value="" />
+          <div class="goal-grid">
+            <div class="form-group">
+              <label for="goalName">Cíl</label>
+              <input type="text" id="goalName" placeholder="Např. Nouzová rezerva" />
+            </div>
+
+            <div class="form-group">
+              <label for="goalTarget">Cílová částka</label>
+              <input type="number" id="goalTarget" min="0" step="0.01" placeholder="Např. 100000" />
+            </div>
+
+            <div class="form-group">
+              <label for="goalCurrent">Aktuálně naspořeno</label>
+              <input type="number" id="goalCurrent" min="0" step="0.01" placeholder="Např. 28000" />
+            </div>
+
+            <div class="form-group">
+              <label for="goalContribution">Měsíční vklad</label>
+              <input type="number" id="goalContribution" min="0" step="0.01" placeholder="Např. 3000" />
+            </div>
+          </div>
+
+          <div class="goal-form-actions">
+            <button id="goalSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit cíl</button>
+          </div>
+        </form>
+
+        <div id="goalsList" class="goals-list"></div>
+      </article>
+
+      <article class="glass-card recurring-card">
+        <div class="section-head compact-head">
+          <div>
+            <h2>Opakované platby</h2>
+          </div>
+          <div class="quick-add-badge-v3">Auto flow</div>
+        </div>
+
+        <form id="recurringForm" class="recurring-form">
+          <input type="hidden" id="recurringId" value="" />
+          <div class="recurring-grid">
+            <div class="form-group">
+              <label for="recurringTitle">Název</label>
+              <input type="text" id="recurringTitle" placeholder="Např. Nájem" />
+            </div>
+
+            <div class="form-group">
+              <label for="recurringAmount">Částka</label>
+              <input type="number" id="recurringAmount" min="0" step="0.01" placeholder="Např. 14500" />
+            </div>
+
+            <div class="form-group">
+              <label for="recurringType">Typ</label>
+              <select id="recurringType">
+                <option value="expense">Výdaj</option>
+                <option value="income">Příjem</option>
+                <option value="investment">Investice</option>
+                <option value="tithe">Desátky</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="recurringCategory">Kategorie</label>
+              <select id="recurringCategory">
+                <option value="Bydlení">Bydlení</option>
+                <option value="Jídlo">Jídlo</option>
+                <option value="Doprava">Doprava</option>
+                <option value="Zdraví">Zdraví</option>
+                <option value="Účty">Účty</option>
+                <option value="Zábava">Zábava</option>
+                <option value="Restaurace">Restaurace</option>
+                <option value="Cestování">Cestování</option>
+                <option value="Spoření">Spoření</option>
+                <option value="Investice">Investice</option>
+                <option value="Desátky">Desátky</option>
+                <option value="Ostatní">Ostatní</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="recurringDay">Den v měsíci</label>
+              <input type="number" id="recurringDay" min="1" max="31" step="1" placeholder="Např. 15" />
+            </div>
+          </div>
+
+          <div class="recurring-form-actions">
+            <button id="recurringSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit platbu</button>
+          </div>
+        </form>
+
+        <div id="recurringList" class="recurring-list"></div>
+        <div id="smartInsights" class="smart-insights"></div>
+      </article>
+    </section>
+
+    <section class="glass-card transactions-section">
+      <div class="transactions-topbar">
+        <div>
+          <h2>Transakce</h2>
+        </div>
+
+        <button class="btn btn-gold btn-small" id="openQuickAddFromTransactions" type="button">
+          + Nová transakce
+        </button>
+      </div>
+
+      <div class="transactions-summary">
+        <div class="summary-mini-card">
+          <span>Počet</span>
+          <strong id="transactionsCount">0</strong>
+        </div>
+        <div class="summary-mini-card">
+          <span>Výdaje</span>
+          <strong id="transactionsExpenseTotal">0 Kč</strong>
+        </div>
+        <div class="summary-mini-card">
+          <span>Příjmy</span>
+          <strong id="transactionsIncomeTotal">0 Kč</strong>
+        </div>
+        <div class="summary-mini-card">
+          <span>Investice + desátky</span>
+          <strong id="transactionsOtherTotal">0 Kč</strong>
+        </div>
+      </div>
+
+      <div class="transactions-filters glass-subcard">
+        <div class="filters-grid filters-grid-primary">
+          <div class="form-group">
+            <label for="transactionSearch">Hledat</label>
+            <input type="text" id="transactionSearch" placeholder="Hledat podle názvu nebo poznámky..." />
+          </div>
+
+          <div class="form-group">
+            <label for="transactionFilterType">Typ</label>
+            <select id="transactionFilterType">
+              <option value="all">Vše</option>
+              <option value="expense">Výdaje</option>
+              <option value="income">Příjmy</option>
+              <option value="investment">Investice</option>
+              <option value="tithe">Desátky</option>
+            </select>
+          </div>
+        </div>
+
+        <details class="advanced-filters">
+          <summary class="advanced-filters-toggle">Rozšířené filtry</summary>
+          <div class="filters-grid filters-grid-advanced">
+            <div class="form-group">
+              <label for="transactionFilterCategory">Kategorie</label>
+              <input type="text" id="transactionFilterCategory" placeholder="Např. Jídlo..." />
+            </div>
+
+            <div class="form-group">
+              <label for="transactionSort">Řazení</label>
+              <select id="transactionSort">
+                <option value="date-desc">Nejnovější</option>
+                <option value="date-asc">Nejstarší</option>
+                <option value="amount-desc">Částka ↓</option>
+                <option value="amount-asc">Částka ↑</option>
+                <option value="title-asc">Název A-Z</option>
+                <option value="title-desc">Název Z-A</option>
+              </select>
+            </div>
+          </div>
+        </details>
+
+        <div class="filters-actions">
+          <button class="btn btn-ghost btn-small" id="resetTransactionFilters" type="button">Vyčistit filtry</button>
+        </div>
+      </div>
+
+      <div class="transactions-table-wrap">
+        <table class="transactions-table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Název</th>
+              <th>Kategorie</th>
+              <th>Typ</th>
+              <th>Částka</th>
+              <th>Akce</th>
+            </tr>
+          </thead>
+          <tbody id="transactionsTableBody"></tbody>
+        </table>
+
+        <div class="transactions-cards" id="transactionsCards"></div>
+
+        <div class="empty-state hidden" id="transactionsEmptyState">
+          <div class="empty-icon">◉</div>
+          <h3>Žádné transakce</h3>
+          <p>Pro tento filtr nebyly nalezeny žádné záznamy.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="editTransactionModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <div class="modal-dialog glass-card" role="dialog" aria-modal="true" aria-labelledby="editTransactionTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="editTransactionTitle">Upravit transakci</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeEditTransactionModal" aria-label="Zavřít">×</button>
+      </div>
+
+      <form id="editTransactionForm" class="modal-form">
+        <input type="hidden" id="editTransactionId" value="" />
+
+        <div class="modal-grid">
+          <div class="form-group">
+            <label for="editTransactionTitleInput">Název</label>
+            <input type="text" id="editTransactionTitleInput" />
+          </div>
+
+          <div class="form-group">
+            <label for="editTransactionAmount">Částka</label>
+            <input type="number" id="editTransactionAmount" min="0" step="0.01" />
+          </div>
+
+          <div class="form-group">
+            <label for="editTransactionType">Typ</label>
+            <select id="editTransactionType">
+              <option value="expense">Výdaj</option>
+              <option value="income">Příjem</option>
+              <option value="investment">Investice</option>
+              <option value="tithe">Desátky</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editTransactionCategory">Kategorie</label>
+            <input type="text" id="editTransactionCategory" list="transactionCategoryOptions" placeholder="Např. Jídlo" />
+          </div>
+
+          <div class="form-group">
+            <label for="editTransactionDate">Datum</label>
+            <input type="date" id="editTransactionDate" />
+          </div>
+
+          <div class="form-group modal-note-field">
+            <label for="editTransactionNote">Poznámka</label>
+            <input type="text" id="editTransactionNote" placeholder="Volitelná poznámka..." />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-small" id="cancelEditTransaction">Zrušit</button>
+          <button type="submit" class="btn btn-gold btn-small">Uložit změny</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <datalist id="transactionCategoryOptions">
+    <option value="Bydlení"></option>
+    <option value="Jídlo"></option>
+    <option value="Doprava"></option>
+    <option value="Zdraví"></option>
+    <option value="Účty"></option>
+    <option value="Zábava"></option>
+    <option value="Restaurace"></option>
+    <option value="Cestování"></option>
+    <option value="Spoření"></option>
+    <option value="Investice"></option>
+    <option value="Desátky"></option>
+    <option value="Ostatní"></option>
+  </datalist>
+  <script src="dashboard.js"></script>
+</body>
+</html>
+
