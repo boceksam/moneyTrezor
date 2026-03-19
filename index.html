@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="cs">
 <head>
   <meta charset="utf-8" />
@@ -9,13 +9,56 @@
 <body>
   <div class="money-layer" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
+  <div class="hero-orb hero-orb-1" aria-hidden="true"></div>
+  <div class="hero-orb hero-orb-2" aria-hidden="true"></div>
+  <div class="hero-grid-lines" aria-hidden="true"></div>
 
-  <main class="center">
-    <section class="card" role="region" aria-label="Přihlášení">
+  <main class="landing-shell">
+    <section class="hero-panel" aria-label="Úvod aplikace">
+      <div class="hero-chip">Luxury fintech</div>
+      <h1 class="hero-title">Měj své finance pod kontrolou s elegancí a přehledem.</h1>
+      <p class="hero-copy">
+        Trezor výdajů spojuje rychlé zapisování transakcí, prémiové grafy a chytré měsíční přehledy
+        do jednoho čistého dashboardu.
+      </p>
+
+      <div class="hero-summary">
+        <div class="hero-summary-value">1 dashboard</div>
+        <div class="hero-summary-copy">transakce, rozpočty, cíle, kalendář i roční PDF přehledy na jednom místě</div>
+      </div>
+
+      <div class="hero-benefits">
+        <div class="benefit-row">
+          <span class="benefit-mark" aria-hidden="true"></span>
+          <div>
+            <strong>Rychlé přidání transakcí</strong>
+            <p>Výdaj, příjem i investice přidáš během pár sekund.</p>
+          </div>
+        </div>
+        <div class="benefit-row">
+          <span class="benefit-mark" aria-hidden="true"></span>
+          <div>
+            <strong>Měsíční i roční přehledy</strong>
+            <p>Grafy, kalendář a export do PDF pro lepší kontrolu.</p>
+          </div>
+        </div>
+        <div class="benefit-row">
+          <span class="benefit-mark" aria-hidden="true"></span>
+          <div>
+            <strong>Rozpočty a plánování</strong>
+            <p>Cíle, opakované platby a upozornění na limity.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card auth-card" role="region" aria-label="Přihlášení">
+      <div class="card-glow" aria-hidden="true"></div>
       <header class="card-header">
         <div class="logo" aria-hidden="true">₿</div>
-        <h1 class="title">Trezor výdajů</h1>
-        <p class="subtitle">Přihlášení do aplikace</p>
+        <div class="eyebrow">Trezor výdajů</div>
+        <h2 class="title">Vstup do aplikace</h2>
+        <p class="subtitle">Přihlas se nebo si během chvíle vytvoř nový účet.</p>
       </header>
 
       <form class="form" id="authForm">
@@ -24,7 +67,7 @@
           <input
             id="emailInput"
             type="email"
-            placeholder="mámMáloPenez@gmail.com"
+            placeholder="mámMáloPenězVTrezoru@chcivíc.hned"
             autocomplete="email"
             required
           />
@@ -56,11 +99,17 @@
         </div>
       </form>
 
+      <div class="auth-aside">
+        <div class="mini-note">
+          <strong>Tip</strong>
+          <p>Po přihlášení tě čeká dashboard s měsíčním kalendářem, prémiovými grafy a exportem do PDF.</p>
+        </div>
+      </div>
+
       <p id="authMessage" class="auth-message"></p>
     </section>
   </main>
 
-  <script src="money.js"></script>
   <script>
     const USERS_KEY = "trezor_vydaju_users";
     const SESSION_KEY = "trezor_vydaju_session";
@@ -85,7 +134,7 @@
       const el = document.getElementById("authMessage");
       if (!el) return;
       el.textContent = text;
-      el.className = "auth-message " + type;
+      el.className = `auth-message ${type}`;
     }
 
     function normalizeEmail(email) {

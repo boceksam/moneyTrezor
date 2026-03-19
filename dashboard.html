@@ -12,13 +12,32 @@
   <div class="dashboard-bg-orb dashboard-bg-orb-2"></div>
 
   <div class="app-shell">
-    <header class="topbar">
-      <div>
+    <header class="glass-card top-hero-bar">
+      <div class="top-hero-glow top-hero-glow-1"></div>
+      <div class="top-hero-glow top-hero-glow-2"></div>
+
+      <div class="top-hero-copy">
         <p class="eyebrow">Finance dashboard</p>
-        <h1>Trezor výdajů</h1>
+        <div class="top-hero-title-row">
+          <h1>Trezor výdajů</h1>
+          <span class="top-hero-badge">Premium flow</span>
+        </div>
       </div>
 
-      <div class="topbar-actions">
+      <div class="top-hero-month-shell">
+        <span class="top-hero-month-label">Aktuálně zvolený měsíc</span>
+        <div class="top-hero-month">
+          <button id="prevMonthBtn" class="month-nav-btn" type="button">←</button>
+          <div class="month-center">
+            <h2 id="currentMonthLabel">-</h2>
+          </div>
+          <button id="openMonthPickerBtn" class="month-nav-btn month-picker-btn" type="button" aria-label="Vybrat měsíc">📅</button>
+          <input id="monthPickerInput" class="month-picker-input" type="month" />
+          <button id="nextMonthBtn" class="month-nav-btn" type="button">→</button>
+        </div>
+      </div>
+
+      <div class="topbar-actions top-hero-actions">
         <button id="themeToggle" class="btn btn-ghost btn-small theme-toggle-btn" type="button">
           <span id="themeToggleIcon">🌙</span>
           <span id="themeToggleText">Tmavý režim</span>
@@ -29,31 +48,6 @@
         <button id="logoutBtn" class="btn btn-danger btn-small" type="button">Odhlásit se</button>
       </div>
     </header>
-
-    <section class="glass-card month-bar">
-      <button id="prevMonthBtn" class="month-nav-btn" type="button">←</button>
-      <div class="month-center">
-        <p>Aktuálně zvolený měsíc</p>
-        <h2 id="currentMonthLabel">-</h2>
-      </div>
-      <button id="nextMonthBtn" class="month-nav-btn" type="button">→</button>
-    </section>
-
-    <section class="glass-card month-calendar-card">
-      <div class="section-head compact-head month-calendar-head">
-        <div>
-          <h2>Kalendář měsíce</h2>
-        </div>
-        <div class="month-calendar-legend">
-          <span><i class="legend-dot income-dot"></i>Příjem</span>
-          <span><i class="legend-dot expense-dot"></i>Výdaj</span>
-          <span><i class="legend-dot mixed-dot"></i>Kombinace</span>
-        </div>
-      </div>
-
-      <div class="month-calendar-weekdays" id="monthCalendarWeekdays"></div>
-      <div class="month-calendar-grid" id="monthCalendarGrid"></div>
-    </section>
 
     <section class="kpi-grid">
       <article class="glass-card kpi-card income-kpi">
@@ -83,6 +77,7 @@
       <div class="section-head compact-head quick-add-head-v3">
         <div>
           <h2>Rychlé přidání</h2>
+          <p>Vlož transakci rychle, čistě a bez přemýšlení navíc.</p>
         </div>
         <div class="quick-add-badge-v3">Smart add</div>
       </div>
@@ -101,19 +96,10 @@
             <label for="transactionCategory">Kategorie</label>
             <select id="transactionCategory">
               <option value="">Vyber kategorii</option>
-              <option value="Bydlení">Bydlení</option>
-              <option value="Jídlo">Jídlo</option>
-              <option value="Doprava">Doprava</option>
-              <option value="Zdraví">Zdraví</option>
-              <option value="Účty">Účty</option>
-              <option value="Zábava">Zábava</option>
-              <option value="Restaurace">Restaurace</option>
-              <option value="Cestování">Cestování</option>
-              <option value="Spoření">Spoření</option>
-              <option value="Investice">Investice</option>
-              <option value="Desátky">Desátky</option>
-              <option value="Ostatní">Ostatní</option>
             </select>
+            <div class="quick-category-tools">
+              <button id="toggleCustomCategoryBtn" class="btn btn-ghost btn-small quick-inline-btn" type="button">+ Vlastní kategorie</button>
+            </div>
           </div>
 
           <div class="form-group quick-title">
@@ -136,14 +122,18 @@
             <input type="text" id="transactionNote" placeholder="Volitelná poznámka..." />
           </div>
 
-          <div class="quick-form-footer">
-            <div class="quick-category-chips" id="quickCategoryChips">
-              <button type="button" class="quick-category-chip" data-category="Jídlo">Jídlo</button>
-              <button type="button" class="quick-category-chip" data-category="Doprava">Doprava</button>
-              <button type="button" class="quick-category-chip" data-category="Bydlení">Bydlení</button>
-              <button type="button" class="quick-category-chip" data-category="Restaurace">Restaurace</button>
-              <button type="button" class="quick-category-chip" data-category="Zábava">Zábava</button>
+          <div class="custom-category-panel hidden" id="customCategoryPanel">
+            <div class="form-group custom-category-input-group">
+              <label for="customCategoryInput">Nová kategorie</label>
+              <input type="text" id="customCategoryInput" placeholder="Např. Veterina nebo Kurzy" />
             </div>
+            <div class="custom-category-actions">
+              <button id="saveCustomCategoryBtn" class="btn btn-gold btn-small" type="button">Uložit kategorii</button>
+            </div>
+          </div>
+
+          <div class="quick-form-footer">
+            <div class="quick-category-chips" id="quickCategoryChips"></div>
 
             <div class="quick-footer-actions">
               <button type="reset" class="btn btn-ghost btn-small">Vyčistit</button>
@@ -264,17 +254,7 @@
         <div class="budget-toolbar">
           <div class="form-group budget-field">
             <label for="budgetCategory">Kategorie</label>
-            <select id="budgetCategory">
-              <option value="Bydlení">Bydlení</option>
-              <option value="Jídlo">Jídlo</option>
-              <option value="Doprava">Doprava</option>
-              <option value="Zdraví">Zdraví</option>
-              <option value="Účty">Účty</option>
-              <option value="Zábava">Zábava</option>
-              <option value="Restaurace">Restaurace</option>
-              <option value="Cestování">Cestování</option>
-              <option value="Ostatní">Ostatní</option>
-            </select>
+            <select id="budgetCategory"></select>
           </div>
 
           <div class="form-group budget-field budget-limit-field">
@@ -365,20 +345,7 @@
 
             <div class="form-group">
               <label for="recurringCategory">Kategorie</label>
-              <select id="recurringCategory">
-                <option value="Bydlení">Bydlení</option>
-                <option value="Jídlo">Jídlo</option>
-                <option value="Doprava">Doprava</option>
-                <option value="Zdraví">Zdraví</option>
-                <option value="Účty">Účty</option>
-                <option value="Zábava">Zábava</option>
-                <option value="Restaurace">Restaurace</option>
-                <option value="Cestování">Cestování</option>
-                <option value="Spoření">Spoření</option>
-                <option value="Investice">Investice</option>
-                <option value="Desátky">Desátky</option>
-                <option value="Ostatní">Ostatní</option>
-              </select>
+              <select id="recurringCategory"></select>
             </div>
 
             <div class="form-group">
@@ -395,6 +362,22 @@
         <div id="recurringList" class="recurring-list"></div>
         <div id="smartInsights" class="smart-insights"></div>
       </article>
+    </section>
+
+    <section class="glass-card month-calendar-card">
+      <div class="section-head compact-head month-calendar-head">
+        <div>
+          <h2>Kalendář měsíce</h2>
+        </div>
+        <div class="month-calendar-legend">
+          <span><i class="legend-dot income-dot"></i>Příjem</span>
+          <span><i class="legend-dot expense-dot"></i>Výdaj</span>
+          <span><i class="legend-dot mixed-dot"></i>Kombinace</span>
+        </div>
+      </div>
+
+      <div class="month-calendar-weekdays" id="monthCalendarWeekdays"></div>
+      <div class="month-calendar-grid" id="monthCalendarGrid"></div>
     </section>
 
     <section class="glass-card transactions-section">
@@ -558,20 +541,7 @@
   </div>
 
   <div id="toastContainer" class="toast-container"></div>
-  <datalist id="transactionCategoryOptions">
-    <option value="Bydlení"></option>
-    <option value="Jídlo"></option>
-    <option value="Doprava"></option>
-    <option value="Zdraví"></option>
-    <option value="Účty"></option>
-    <option value="Zábava"></option>
-    <option value="Restaurace"></option>
-    <option value="Cestování"></option>
-    <option value="Spoření"></option>
-    <option value="Investice"></option>
-    <option value="Desátky"></option>
-    <option value="Ostatní"></option>
-  </datalist>
+  <datalist id="transactionCategoryOptions"></datalist>
   <script src="dashboard.js"></script>
 </body>
 </html>

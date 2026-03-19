@@ -1,4 +1,5 @@
 ﻿const BUDGETS_KEY = "trezor_vydaju_budgets";
+const CUSTOM_CATEGORIES_KEY = "trezor_vydaju_custom_categories";
 const GOALS_KEY = "trezor_vydaju_goals";
 const RECURRING_KEY = "trezor_vydaju_recurring";
 const THEME_KEY = "trezor_vydaju_theme";
@@ -21,6 +22,42 @@ const RULE_TARGETS = {
   fun: 26,
   savings: 16,
   tithe: 10
+};
+
+const QUICK_CATEGORIES = {
+  expense: [
+    "Bydlení",
+    "Jídlo",
+    "Doprava",
+    "Zdraví",
+    "Předplatné",
+    "Splátky",
+    "Restaurace",
+    "Cestování",
+    "Ostatní"
+  ],
+  income: [
+    "Mzda",
+    "Bonus",
+    "Podnikání",
+    "Prodej",
+    "Vrácení peněz",
+    "Ostatní"
+  ],
+  investment: [
+    "Investice",
+    "Spoření",
+    "Desátky",
+    "Rezerva",
+    "Akcie / ETF",
+    "Ostatní"
+  ]
+};
+
+const QUICK_CATEGORY_CHIPS = {
+  expense: ["Jídlo", "Doprava", "Bydlení", "Předplatné", "Splátky"],
+  income: ["Mzda", "Bonus", "Podnikání", "Prodej", "Vrácení peněz"],
+  investment: ["Investice", "Spoření", "Desátky", "Rezerva", "Akcie / ETF"]
 };
 
 const centerTextPlugin = {
@@ -163,6 +200,18 @@ function getBudgets() {
   }
 }
 
+function saveCustomCategories(data) {
+  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(data));
+}
+
+function getCustomCategories() {
+  try {
+    return JSON.parse(localStorage.getItem(CUSTOM_CATEGORIES_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
 function saveGoals(data) {
   localStorage.setItem(GOALS_KEY, JSON.stringify(data));
 }
@@ -216,6 +265,60 @@ function normalizeTransactionType(type, category) {
     return "tithe";
   }
   return type;
+}
+
+function getCategoriesForType(type = "expense") {
+  const baseCategories = QUICK_CATEGORIES[type] || QUICK_CATEGORIES.expense;
+  const customCategories = getCustomCategories()
+    .filter(item => item.type === type)
+    .map(item => item.name);
+
+  return [...new Set([...baseCategories, ...customCategories])];
+}
+
+function getAllCategoryNames() {
+  const base = Object.values(QUICK_CATEGORIES).flat();
+  const custom = getCustomCategories().map(item => item.name);
+  return [...new Set([...base, ...custom])];
+}
+
+function renderBudgetCategoryOptions() {
+  const select = document.getElementById("budgetCategory");
+  if (!select) return;
+
+  const selectedBefore = select.value;
+  const categories = getCategoriesForType("expense");
+  select.innerHTML = categories
+    .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+    .join("");
+  if (categories.includes(selectedBefore)) {
+    select.value = selectedBefore;
+  }
+}
+
+function renderRecurringCategoryOptions() {
+  const select = document.getElementById("recurringCategory");
+  const typeSelect = document.getElementById("recurringType");
+  if (!select || !typeSelect) return;
+
+  const selectedBefore = select.value;
+  const normalizedType = typeSelect.value === "tithe" ? "investment" : typeSelect.value;
+  const categories = getCategoriesForType(normalizedType);
+  select.innerHTML = categories
+    .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+    .join("");
+  if (categories.includes(selectedBefore)) {
+    select.value = selectedBefore;
+  }
+}
+
+function renderTransactionCategoryDatalist() {
+  const list = document.getElementById("transactionCategoryOptions");
+  if (!list) return;
+
+  list.innerHTML = getAllCategoryNames()
+    .map(category => `<option value="${escapeHtml(category)}"></option>`)
+    .join("");
 }
 
 function normalizeText(value) {
@@ -322,10 +425,15 @@ function getComparisonText(current, previous) {
 
 function updateMonthLabel() {
   const label = document.getElementById("currentMonthLabel");
+  const monthPicker = document.getElementById("monthPickerInput");
   if (!label) return;
 
   const text = getMonthLabel(selectedYear, selectedMonth);
   label.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+
+  if (monthPicker) {
+    monthPicker.value = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+  }
 }
 
 function getCalendarDayTotals(dateString) {
@@ -1611,6 +1719,7 @@ function addTransaction(event) {
   document.getElementById("quickTransactionForm").reset();
   document.getElementById("transactionDate").value = new Date().toISOString().split("T")[0];
   document.getElementById("transactionType").value = "expense";
+  renderQuickCategoryOptions("expense");
   syncQuickCategoryChips();
 
   const buttons = document.querySelectorAll(".type-switch-btn");
@@ -2894,6 +3003,9 @@ function logout() {
 function renderAll() {
   updateMonthLabel();
   renderMonthCalendar();
+  renderBudgetCategoryOptions();
+  renderRecurringCategoryOptions();
+  renderTransactionCategoryDatalist();
   updateThemeToggleButton();
   renderKpis();
   renderExpenseDonutChart();
@@ -2918,7 +3030,13 @@ function seedDateInput() {
 function bindEvents() {
   document.getElementById("quickTransactionForm")?.addEventListener("submit", addTransaction);
   document.getElementById("quickTransactionForm")?.addEventListener("reset", () => {
-    setTimeout(syncQuickCategoryChips, 0);
+    setTimeout(() => {
+      renderQuickCategoryOptions("expense");
+      syncQuickCategoryChips();
+      toggleCustomCategoryPanel(false);
+      const customInput = document.getElementById("customCategoryInput");
+      if (customInput) customInput.value = "";
+    }, 0);
   });
   document.getElementById("budgetForm")?.addEventListener("submit", saveBudget);
   document.getElementById("goalForm")?.addEventListener("submit", saveGoal);
@@ -2943,10 +3061,44 @@ function bindEvents() {
     renderAll();
   });
 
+  document.getElementById("openMonthPickerBtn")?.addEventListener("click", () => {
+    const monthPicker = document.getElementById("monthPickerInput");
+    if (!monthPicker) return;
+
+    if (typeof monthPicker.showPicker === "function") {
+      monthPicker.showPicker();
+    } else {
+      monthPicker.focus();
+      monthPicker.click();
+    }
+  });
+
+  document.getElementById("monthPickerInput")?.addEventListener("change", event => {
+    const value = event.target?.value;
+    if (!value) return;
+
+    const [yearText, monthText] = value.split("-");
+    const year = Number(yearText);
+    const month = Number(monthText);
+    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return;
+
+    selectedYear = year;
+    selectedMonth = month - 1;
+    renderAll();
+  });
+
   document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
   document.getElementById("exportPdfBtn")?.addEventListener("click", exportPdf);
   document.getElementById("annualReportBtn")?.addEventListener("click", exportAnnualPdf);
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
+  document.getElementById("toggleCustomCategoryBtn")?.addEventListener("click", () => toggleCustomCategoryPanel());
+  document.getElementById("saveCustomCategoryBtn")?.addEventListener("click", saveCustomCategory);
+  document.getElementById("customCategoryInput")?.addEventListener("keydown", event => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    saveCustomCategory();
+  });
+  document.getElementById("recurringType")?.addEventListener("change", renderRecurringCategoryOptions);
 
   document.getElementById("openQuickAddFromTransactions")?.addEventListener("click", () => {
     const section = document.querySelector(".quick-add-card");
@@ -3001,8 +3153,81 @@ function initQuickTypeSwitch() {
       buttons.forEach(btn => btn.classList.remove("active"));
       button.classList.add("active");
       hiddenTypeInput.value = button.dataset.type;
+      renderQuickCategoryOptions(button.dataset.type || "expense");
     });
   });
+}
+
+function renderQuickCategoryOptions(type = "expense") {
+  const categorySelect = document.getElementById("transactionCategory");
+  const chipsWrap = document.getElementById("quickCategoryChips");
+  if (!categorySelect || !chipsWrap) return;
+
+  const selectedBefore = categorySelect.value;
+  const categories = getCategoriesForType(type);
+  const chips = QUICK_CATEGORY_CHIPS[type] || QUICK_CATEGORY_CHIPS.expense;
+
+  categorySelect.innerHTML = [
+    '<option value="">Vyber kategorii</option>',
+    ...categories.map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+  ].join("");
+
+  chipsWrap.innerHTML = chips
+    .map(category => `<button type="button" class="quick-category-chip" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`)
+    .join("");
+
+  categorySelect.value = categories.includes(selectedBefore) ? selectedBefore : "";
+  syncQuickCategoryChips();
+}
+
+function toggleCustomCategoryPanel(forceOpen = null) {
+  const panel = document.getElementById("customCategoryPanel");
+  if (!panel) return;
+
+  const shouldOpen = forceOpen == null ? panel.classList.contains("hidden") : forceOpen;
+  panel.classList.toggle("hidden", !shouldOpen);
+  if (shouldOpen) {
+    document.getElementById("customCategoryInput")?.focus();
+  }
+}
+
+function saveCustomCategory() {
+  const hiddenTypeInput = document.getElementById("transactionType");
+  const input = document.getElementById("customCategoryInput");
+  const categorySelect = document.getElementById("transactionCategory");
+  if (!hiddenTypeInput || !input || !categorySelect) return;
+
+  const name = input.value.trim();
+  const type = hiddenTypeInput.value || "expense";
+  if (!name) {
+    showToast("Zadej název vlastní kategorie.");
+    return;
+  }
+
+  const exists = getCategoriesForType(type).some(category => normalizeText(category) === normalizeText(name));
+  if (exists) {
+    categorySelect.value = getCategoriesForType(type).find(category => normalizeText(category) === normalizeText(name)) || "";
+    syncQuickCategoryChips();
+    toggleCustomCategoryPanel(false);
+    input.value = "";
+    showToast("Tahle kategorie už existuje.");
+    return;
+  }
+
+  const current = getCustomCategories();
+  current.push({ name, type });
+  saveCustomCategories(current);
+
+  renderQuickCategoryOptions(type);
+  renderBudgetCategoryOptions();
+  renderRecurringCategoryOptions();
+  renderTransactionCategoryDatalist();
+
+  categorySelect.value = name;
+  syncQuickCategoryChips();
+  input.value = "";
+  toggleCustomCategoryPanel(false);
+  showToast("Vlastní kategorie byla přidána.");
 }
 
 function syncQuickCategoryChips() {
@@ -3014,14 +3239,17 @@ function syncQuickCategoryChips() {
 
 function initQuickCategoryChips() {
   const categorySelect = document.getElementById("transactionCategory");
-  const chips = document.querySelectorAll("#quickCategoryChips .quick-category-chip");
-  if (!categorySelect || !chips.length) return;
+  const chipsWrap = document.getElementById("quickCategoryChips");
+  const hiddenTypeInput = document.getElementById("transactionType");
+  if (!categorySelect || !chipsWrap || !hiddenTypeInput) return;
 
-  chips.forEach(chip => {
-    chip.addEventListener("click", () => {
-      categorySelect.value = chip.dataset.category || "";
-      syncQuickCategoryChips();
-    });
+  renderQuickCategoryOptions(hiddenTypeInput.value || "expense");
+
+  chipsWrap.addEventListener("click", event => {
+    const chip = event.target.closest(".quick-category-chip");
+    if (!chip) return;
+    categorySelect.value = chip.dataset.category || "";
+    syncQuickCategoryChips();
   });
 
   categorySelect.addEventListener("change", syncQuickCategoryChips);
