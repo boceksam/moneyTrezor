@@ -9,106 +9,125 @@
 <body>
   <div class="money-layer" aria-hidden="true"></div>
   <div class="vignette" aria-hidden="true"></div>
-  <div class="hero-orb hero-orb-1" aria-hidden="true"></div>
-  <div class="hero-orb hero-orb-2" aria-hidden="true"></div>
-  <div class="hero-grid-lines" aria-hidden="true"></div>
+  <div class="bg-orb bg-orb-1" aria-hidden="true"></div>
+  <div class="bg-orb bg-orb-2" aria-hidden="true"></div>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="bg-lines" aria-hidden="true"></div>
 
-  <main class="landing-shell">
-    <section class="hero-panel" aria-label="Úvod aplikace">
-      <div class="hero-chip">Luxury fintech</div>
-      <h1 class="hero-title">Měj své finance pod kontrolou s elegancí a přehledem.</h1>
-      <p class="hero-copy">
-        Trezor výdajů spojuje rychlé zapisování transakcí, prémiové grafy a chytré měsíční přehledy
-        do jednoho čistého dashboardu.
-      </p>
+  <main class="startup-shell">
+    <section class="startup-hero" aria-label="Úvod aplikace">
+      <div class="hero-chip-row">
+        <div class="hero-chip">Modern fintech</div>
+        <div class="hero-status">Bezpečný vstup do tvého přehledu</div>
+      </div>
 
-      <div class="hero-summary">
-        <div class="hero-summary-value">1 dashboard</div>
-        <div class="hero-summary-copy">transakce, rozpočty, cíle, kalendář i roční PDF přehledy na jednom místě</div>
+      <div class="hero-core">
+        <p class="hero-kicker">Peníze pod kontrolou</p>
+        <h1 class="hero-title">Jeden přehled pro příjmy, výdaje, cíle i rozpočty.</h1>
+        <p class="hero-copy">
+          Trezor výdajů ti pomůže udržet si klid, přehled a rytmus v osobních financích.
+          Všechno důležité vidíš na jednom místě, bez chaosu a bez zbytečných kroků.
+        </p>
+      </div>
+
+      <div class="hero-visual-grid" aria-hidden="true">
+        <article class="visual-card visual-card-large">
+          <span class="visual-label">Aktuální měsíc</span>
+          <strong>Dashboard, kalendář a rozpočty</strong>
+          <p>Okamžitě vidíš, kde se finance hýbou a co si žádá pozornost.</p>
+        </article>
+        <article class="visual-card visual-card-accent">
+          <span class="visual-label">Pravidelný rytmus</span>
+          <strong>Cíle a opakované platby</strong>
+        </article>
+        <article class="visual-card visual-card-mini">
+          <span class="visual-label">Výstupy</span>
+          <strong>PDF přehledy</strong>
+        </article>
       </div>
 
       <div class="hero-benefits">
-        <div class="benefit-row">
-          <span class="benefit-mark" aria-hidden="true"></span>
-          <div>
-            <strong>Rychlé přidání transakcí</strong>
-            <p>Výdaj, příjem i investice přidáš během pár sekund.</p>
-          </div>
+        <div class="benefit-pill">
+          <span class="benefit-dot"></span>
+          Rychlé zapisování transakcí
         </div>
-        <div class="benefit-row">
-          <span class="benefit-mark" aria-hidden="true"></span>
-          <div>
-            <strong>Měsíční i roční přehledy</strong>
-            <p>Grafy, kalendář a export do PDF pro lepší kontrolu.</p>
-          </div>
+        <div class="benefit-pill">
+          <span class="benefit-dot"></span>
+          Přehledné grafy a kalendář
         </div>
-        <div class="benefit-row">
-          <span class="benefit-mark" aria-hidden="true"></span>
-          <div>
-            <strong>Rozpočty a plánování</strong>
-            <p>Cíle, opakované platby a upozornění na limity.</p>
-          </div>
+        <div class="benefit-pill">
+          <span class="benefit-dot"></span>
+          Rozpočty, cíle a limity
         </div>
       </div>
-    </section>
 
-    <section class="card auth-card" role="region" aria-label="Přihlášení">
-      <div class="card-glow" aria-hidden="true"></div>
-      <header class="card-header">
-        <div class="logo" aria-hidden="true">₿</div>
-        <div class="eyebrow">Trezor výdajů</div>
-        <h2 class="title">Vstup do aplikace</h2>
-        <p class="subtitle">Přihlas se nebo si během chvíle vytvoř nový účet.</p>
-      </header>
-
-      <form class="form" id="authForm">
-        <label class="field">
-          <span>Email</span>
-          <input
-            id="emailInput"
-            type="email"
-            placeholder="mámMáloPenězVTrezoru@chcivíc.hned"
-            autocomplete="email"
-            required
-          />
-        </label>
-
-        <label class="field">
-          <span>Heslo</span>
-          <input
-            id="passwordInput"
-            type="password"
-            placeholder="••••••••"
-            autocomplete="current-password"
-            required
-          />
-        </label>
-
-        <button class="btn" type="submit">
-          <span class="btn-glow" aria-hidden="true"></span>
-          Přihlásit se
+      <div class="hero-cta-block">
+        <button class="enter-app-btn" id="openLoginModal" type="button">
+          <span class="enter-app-glow" aria-hidden="true"></span>
+          Vstoupit do aplikace
         </button>
-
-        <div class="meta">
-          <button type="button" id="registerBtn" class="register-btn">
-            <span class="register-btn-shine" aria-hidden="true"></span>
-            Registrovat
-          </button>
-          <span class="dot" aria-hidden="true">•</span>
-          <button id="forgotBtn" class="link" type="button">Zapomenuté heslo</button>
-        </div>
-      </form>
-
-      <div class="auth-aside">
-        <div class="mini-note">
-          <strong>Tip</strong>
-          <p>Po přihlášení tě čeká dashboard s měsíčním kalendářem, prémiovými grafy a exportem do PDF.</p>
-        </div>
+        <p class="hero-cta-note">Po kliknutí se otevře přihlášení přímo uprostřed obrazovky.</p>
       </div>
-
-      <p id="authMessage" class="auth-message"></p>
     </section>
   </main>
+
+  <div class="auth-modal" id="authModal" aria-hidden="true">
+    <div class="auth-backdrop" data-close-auth="true"></div>
+    <section class="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <button class="auth-close" id="closeLoginModal" type="button" aria-label="Zavřít přihlášení">×</button>
+
+      <div class="auth-card">
+        <header class="auth-header">
+          <div class="logo" aria-hidden="true">T</div>
+          <div class="eyebrow">Trezor výdajů</div>
+          <h2 class="title" id="authTitle">Vstup do aplikace</h2>
+          <p class="subtitle">Přihlas se nebo si vytvoř účet a pokračuj do svého přehledu financí.</p>
+        </header>
+
+        <form class="form" id="authForm">
+          <label class="field">
+            <span>Email</span>
+            <input
+              id="emailInput"
+              type="email"
+              placeholder="mámMáloPenězVTrezoru@chcivíc.hned"
+              autocomplete="email"
+              required
+            />
+          </label>
+
+          <label class="field">
+            <span>Heslo</span>
+            <input
+              id="passwordInput"
+              type="password"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+
+          <button class="btn btn-primary" type="submit">
+            <span class="btn-glow" aria-hidden="true"></span>
+            Přihlásit se
+          </button>
+
+          <div class="meta">
+            <button type="button" id="registerBtn" class="register-btn">Registrovat</button>
+            <span class="dot" aria-hidden="true">•</span>
+            <button id="forgotBtn" class="link" type="button">Zapomenuté heslo</button>
+          </div>
+        </form>
+
+        <div class="auth-note">
+          <strong>Po přihlášení uvidíš</strong>
+          <p>Jasný dashboard, měsíční kalendář, rozpočty, cíle i přehledné PDF reporty.</p>
+        </div>
+
+        <p id="authMessage" class="auth-message"></p>
+      </div>
+    </section>
+  </div>
 
   <script>
     const USERS_KEY = "trezor_vydaju_users";
@@ -148,11 +167,41 @@
         return;
       }
 
+      const authModal = document.getElementById("authModal");
+      const openLoginModal = document.getElementById("openLoginModal");
+      const closeLoginModal = document.getElementById("closeLoginModal");
       const authForm = document.getElementById("authForm");
       const emailInput = document.getElementById("emailInput");
       const passwordInput = document.getElementById("passwordInput");
       const registerBtn = document.getElementById("registerBtn");
       const forgotBtn = document.getElementById("forgotBtn");
+
+      function openModal() {
+        document.body.classList.add("modal-open");
+        authModal?.classList.add("is-open");
+        authModal?.setAttribute("aria-hidden", "false");
+        window.setTimeout(() => emailInput?.focus(), 80);
+      }
+
+      function closeModal() {
+        document.body.classList.remove("modal-open");
+        authModal?.classList.remove("is-open");
+        authModal?.setAttribute("aria-hidden", "true");
+      }
+
+      openLoginModal?.addEventListener("click", openModal);
+      closeLoginModal?.addEventListener("click", closeModal);
+      authModal?.addEventListener("click", (event) => {
+        if (event.target instanceof HTMLElement && event.target.dataset.closeAuth === "true") {
+          closeModal();
+        }
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      });
 
       authForm?.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -217,15 +266,30 @@
 
         users.push(newUser);
         saveUsers(users);
+        setSession({ id: newUser.id, email: newUser.email, name: newUser.name });
+        showMessage("Účet byl vytvořen. Přesměrovávám do aplikace.", "success");
 
-        showMessage("Registrace proběhla úspěšně. Teď se můžeš přihlásit.", "success");
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 600);
       });
 
       forgotBtn?.addEventListener("click", () => {
-        showMessage(
-          "Lokální verze zatím obnovu hesla nepodporuje. Použij registrovaný email a heslo.",
-          "info"
-        );
+        const email = normalizeEmail(emailInput?.value || "");
+        if (!email) {
+          showMessage("Zadej nejdřív svůj email.", "error");
+          return;
+        }
+
+        const users = getUsers();
+        const user = users.find(u => u.email === email);
+
+        if (!user) {
+          showMessage("K tomuto emailu jsme účet nenašli.", "error");
+          return;
+        }
+
+        showMessage(`Nápověda: tvoje heslo je \"${user.password}\"`, "info");
       });
     });
   </script>

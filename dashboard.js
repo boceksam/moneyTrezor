@@ -12,6 +12,7 @@ let transactionsData = [];
 
 let selectedMonth = new Date().getMonth();
 let selectedYear = new Date().getFullYear();
+let monthPickerViewYear = selectedYear;
 
 let balanceChartInstance = null;
 let ratioRuleChartInstance = null;
@@ -425,15 +426,66 @@ function getComparisonText(current, previous) {
 
 function updateMonthLabel() {
   const label = document.getElementById("currentMonthLabel");
-  const monthPicker = document.getElementById("monthPickerInput");
   if (!label) return;
 
   const text = getMonthLabel(selectedYear, selectedMonth);
   label.textContent = text.charAt(0).toUpperCase() + text.slice(1);
+}
 
-  if (monthPicker) {
-    monthPicker.value = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}`;
+function getShortMonthNames() {
+  return ["Leden", "Únor", "Březen", "Duben", "Květen", "Červen", "Červenec", "Srpen", "Září", "Říjen", "Listopad", "Prosinec"];
+}
+
+function renderMonthPickerModal() {
+  const grid = document.getElementById("monthPickerGrid");
+  const yearLabel = document.getElementById("monthPickerYearLabel");
+  if (!grid || !yearLabel) return;
+
+  yearLabel.textContent = String(monthPickerViewYear);
+  const today = new Date();
+  const monthNames = getShortMonthNames();
+
+  grid.innerHTML = monthNames.map((monthName, monthIndex) => {
+    const isSelected = monthPickerViewYear === selectedYear && monthIndex === selectedMonth;
+    const isCurrent = monthPickerViewYear === today.getFullYear() && monthIndex === today.getMonth();
+
+    return `
+      <button
+        type="button"
+        class="month-tile${isSelected ? " is-selected" : ""}${isCurrent ? " is-current" : ""}"
+        data-month-index="${monthIndex}"
+      >
+        <span class="month-tile-name">${monthName}</span>
+        <span class="month-tile-meta">${isSelected ? "Aktivní měsíc" : isCurrent ? "Aktuální měsíc" : "Přejít na přehled"}</span>
+      </button>
+    `;
+  }).join("");
+}
+
+function openMonthPickerModal() {
+  monthPickerViewYear = selectedYear;
+  renderMonthPickerModal();
+  document.getElementById("monthPickerModal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+}
+
+function closeMonthPickerModal() {
+  document.getElementById("monthPickerModal")?.classList.add("hidden");
+  if (document.getElementById("editTransactionModal")?.classList.contains("hidden")) {
+    document.body.classList.remove("modal-open");
   }
+}
+
+function changeMonthPickerYear(delta) {
+  monthPickerViewYear += delta;
+  renderMonthPickerModal();
+}
+
+function selectMonthFromPicker(monthIndex) {
+  selectedYear = monthPickerViewYear;
+  selectedMonth = monthIndex;
+  closeMonthPickerModal();
+  renderAll();
 }
 
 function getCalendarDayTotals(dateString) {
@@ -1390,29 +1442,36 @@ function renderGoals() {
 
     return `
       <div class="goal-item">
-        <div class="goal-item-top">
-          <div>
-            <div class="goal-name">${escapeHtml(goal.name)}</div>
-            <div class="goal-meta">
-              <span>Cíl: ${formatCurrency(target)}</span>
-              <span>Naspořeno: ${formatCurrency(current)}</span>
+        <div class="goal-item-row">
+          <div class="goal-item-main">
+            <div class="goal-item-top">
+              <div>
+                <div class="goal-name">${escapeHtml(goal.name)}</div>
+                <div class="goal-meta">
+                  <span>Cíl: ${formatCurrency(target)}</span>
+                  <span>Naspořeno: ${formatCurrency(current)}</span>
+                </div>
+              </div>
+              <div class="goal-actions">
+                <button class="budget-action-btn" type="button" onclick="editGoal('${goal.id}')" title="Upravit cíl">✎</button>
+                <button class="budget-action-btn budget-action-delete" type="button" onclick="deleteGoal('${goal.id}')" title="Smazat cíl">🗑️</button>
+              </div>
+            </div>
+            <div class="goal-progress">
+              <div class="goal-progress-fill" style="width:${percent}%;"></div>
             </div>
           </div>
-          <div class="goal-actions">
-            <button class="budget-action-btn" type="button" onclick="editGoal('${goal.id}')" title="Upravit cíl">✎</button>
-            <button class="budget-action-btn budget-action-delete" type="button" onclick="deleteGoal('${goal.id}')" title="Smazat cíl">🗑️</button>
+
+          <div class="goal-item-side">
+            <div class="goal-meta">
+              <span>${percent.toFixed(1)} % splněno</span>
+              <span>Měsíční vklad: ${formatCurrency(goal.monthlyContribution || 0)}</span>
+            </div>
+            <div class="goal-forecast">
+              <span>${getGoalEta(goal)}</span>
+              <span>Zbývá: ${formatCurrency(Math.max(target - current, 0))}</span>
+            </div>
           </div>
-        </div>
-        <div class="goal-progress">
-          <div class="goal-progress-fill" style="width:${percent}%;"></div>
-        </div>
-        <div class="goal-meta">
-          <span>${percent.toFixed(1)} % splněno</span>
-          <span>Měsíční vklad: ${formatCurrency(goal.monthlyContribution || 0)}</span>
-        </div>
-        <div class="goal-forecast">
-          <span>${getGoalEta(goal)}</span>
-          <span>Zbývá: ${formatCurrency(Math.max(target - current, 0))}</span>
         </div>
       </div>
     `;
@@ -1447,23 +1506,28 @@ function renderRecurringPlans() {
     const nextDate = getRecurringNextDate(plan, selectedYear, selectedMonth);
     return `
       <div class="recurring-item">
-        <div class="recurring-item-top">
-          <div class="recurring-title">${escapeHtml(plan.title)}</div>
-          <span class="type-badge type-${plan.type}">${getTypeLabel(plan.type)}</span>
-        </div>
-        <div class="recurring-meta">
-          <span>${formatCurrency(plan.amount)}</span>
-          <span>${escapeHtml(plan.category || "Bez kategorie")}</span>
-          <span>${formatDate(toInputDate(nextDate))}</span>
-        </div>
-        <div class="goal-forecast">
-          <span>Další zaúčtování: ${Number(plan.dayOfMonth)}. den</span>
-          <span>${plan.lastUsedAt ? `Naposledy použito ${formatDate(plan.lastUsedAt)}` : "Zatím nepoužito"}</span>
-        </div>
-        <div class="recurring-form-actions">
-          <button class="btn btn-ghost btn-small" type="button" onclick="applyRecurringPlan('${plan.id}')">Přidat do měsíce</button>
-          <button class="budget-action-btn" type="button" onclick="editRecurringPlan('${plan.id}')" title="Upravit platbu">✎</button>
-          <button class="budget-action-btn budget-action-delete" type="button" onclick="deleteRecurringPlan('${plan.id}')" title="Smazat platbu">🗑️</button>
+        <div class="recurring-item-compact">
+          <div class="recurring-item-main">
+            <div class="recurring-title-row">
+              <div class="recurring-title-dot type-${plan.type}"></div>
+              <div class="recurring-title">${escapeHtml(plan.title)}</div>
+            </div>
+            <div class="recurring-meta recurring-meta-inline">
+              <span class="recurring-meta-pill recurring-meta-amount">${formatCurrency(plan.amount)}</span>
+              <span class="recurring-meta-pill">${escapeHtml(plan.category || "Bez kategorie")}</span>
+              <span class="recurring-meta-pill">${Number(plan.dayOfMonth)}. den</span>
+              <span class="recurring-meta-subtle">${formatDate(toInputDate(nextDate))}</span>
+            </div>
+          </div>
+
+          <div class="recurring-item-side">
+            <span class="type-badge type-${plan.type}">${getTypeLabel(plan.type)}</span>
+            <div class="recurring-actions recurring-actions-compact">
+              <button class="btn btn-ghost btn-small" type="button" onclick="applyRecurringPlan('${plan.id}')">Přidat</button>
+              <button class="budget-action-btn" type="button" onclick="editRecurringPlan('${plan.id}')" title="Upravit platbu">✎</button>
+              <button class="budget-action-btn budget-action-delete" type="button" onclick="deleteRecurringPlan('${plan.id}')" title="Smazat platbu">🗑️</button>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -3062,29 +3126,21 @@ function bindEvents() {
   });
 
   document.getElementById("openMonthPickerBtn")?.addEventListener("click", () => {
-    const monthPicker = document.getElementById("monthPickerInput");
-    if (!monthPicker) return;
-
-    if (typeof monthPicker.showPicker === "function") {
-      monthPicker.showPicker();
-    } else {
-      monthPicker.focus();
-      monthPicker.click();
-    }
+    openMonthPickerModal();
   });
 
-  document.getElementById("monthPickerInput")?.addEventListener("change", event => {
-    const value = event.target?.value;
-    if (!value) return;
-
-    const [yearText, monthText] = value.split("-");
-    const year = Number(yearText);
-    const month = Number(monthText);
-    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) return;
-
-    selectedYear = year;
-    selectedMonth = month - 1;
-    renderAll();
+  document.getElementById("closeMonthPickerModal")?.addEventListener("click", closeMonthPickerModal);
+  document.querySelectorAll("[data-close-month-modal='true']").forEach(el => {
+    el.addEventListener("click", closeMonthPickerModal);
+  });
+  document.getElementById("monthPickerPrevYear")?.addEventListener("click", () => changeMonthPickerYear(-1));
+  document.getElementById("monthPickerNextYear")?.addEventListener("click", () => changeMonthPickerYear(1));
+  document.getElementById("monthPickerGrid")?.addEventListener("click", event => {
+    const tile = event.target.closest(".month-tile");
+    if (!tile) return;
+    const monthIndex = Number(tile.dataset.monthIndex);
+    if (!Number.isFinite(monthIndex)) return;
+    selectMonthFromPicker(monthIndex);
   });
 
   document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
@@ -3137,6 +3193,11 @@ function bindEvents() {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !document.getElementById("editTransactionModal")?.classList.contains("hidden")) {
       closeEditTransactionModal();
+      return;
+    }
+
+    if (event.key === "Escape" && !document.getElementById("monthPickerModal")?.classList.contains("hidden")) {
+      closeMonthPickerModal();
     }
   });
 }

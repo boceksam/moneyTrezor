@@ -1,21 +1,21 @@
 :root {
-  --bg-main: #0c1018;
-  --bg-secondary: #111827;
-  --card-bg: rgba(255, 255, 255, 0.055);
-  --card-bg-strong: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.10);
-  --text-main: #f7f7f7;
-  --text-soft: rgba(255, 255, 255, 0.68);
+  --bg-main: #07111d;
+  --bg-secondary: #0b1626;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --card-bg-strong: rgba(255, 255, 255, 0.075);
+  --border: rgba(159, 228, 255, 0.10);
+  --text-main: #f4f8fc;
+  --text-soft: rgba(244, 248, 252, 0.68);
   --gold: #d4af37;
   --gold-strong: #f4d97d;
   --danger: #ff8c8c;
   --success: #73e29b;
-  --info: #78a8ff;
+  --info: #8cc8ff;
   --purple: #b485ff;
-  --cyan: #42d9ff;
+  --cyan: #64e1ff;
   --orange: #ffb35c;
   --pink: #ff7ed1;
-  --shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+  --shadow: 0 24px 52px rgba(0, 0, 0, 0.34);
   --radius: 24px;
 }
 
@@ -44,9 +44,9 @@ body {
 
 body {
   background:
-    radial-gradient(circle at top right, rgba(212, 175, 55, 0.10), transparent 22%),
-    radial-gradient(circle at left bottom, rgba(255, 126, 209, 0.08), transparent 20%),
-    radial-gradient(circle at 80% 60%, rgba(66, 217, 255, 0.06), transparent 18%),
+    radial-gradient(circle at top right, rgba(100, 225, 255, 0.09), transparent 22%),
+    radial-gradient(circle at left bottom, rgba(130, 174, 255, 0.08), transparent 20%),
+    radial-gradient(circle at 80% 60%, rgba(217, 187, 102, 0.06), transparent 18%),
     linear-gradient(180deg, var(--bg-secondary), var(--bg-main));
   color: var(--text-main);
   overflow-x: hidden;
@@ -69,8 +69,8 @@ select {
 .dashboard-bg-orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.18;
+  filter: blur(92px);
+  opacity: 0.16;
   pointer-events: none;
   z-index: 0;
 }
@@ -80,7 +80,7 @@ select {
   height: 280px;
   top: 90px;
   right: -40px;
-  background: rgba(212, 175, 55, 0.65);
+  background: rgba(100, 225, 255, 0.44);
   animation: floatOrb 9s ease-in-out infinite;
 }
 
@@ -89,7 +89,7 @@ select {
   height: 240px;
   bottom: 80px;
   left: -30px;
-  background: rgba(66, 217, 255, 0.48);
+  background: rgba(130, 174, 255, 0.34);
   animation: floatOrb 11s ease-in-out infinite reverse;
 }
 
@@ -107,7 +107,7 @@ select {
 
 .eyebrow {
   margin: 0 0 8px;
-  color: var(--gold);
+  color: #baeefe;
   text-transform: uppercase;
   letter-spacing: 0.16em;
   font-size: 0.75rem;
@@ -124,9 +124,9 @@ select {
   padding: 18px 22px;
   margin-bottom: 20px;
   background:
-    radial-gradient(circle at top right, rgba(212,175,55,0.14), transparent 28%),
-    radial-gradient(circle at left center, rgba(66,217,255,0.10), transparent 22%),
-    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+    radial-gradient(circle at top right, rgba(100,225,255,0.14), transparent 28%),
+    radial-gradient(circle at left center, rgba(130,174,255,0.10), transparent 22%),
+    linear-gradient(145deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)),
     var(--card-bg);
 }
 
@@ -151,7 +151,7 @@ body.light-mode .top-hero-bar {
   height: 180px;
   top: -90px;
   right: 12%;
-  background: rgba(212,175,55,0.24);
+  background: rgba(100,225,255,0.18);
   animation: floatOrb 10s ease-in-out infinite;
 }
 
@@ -160,7 +160,7 @@ body.light-mode .top-hero-bar {
   height: 160px;
   left: -70px;
   bottom: -100px;
-  background: rgba(66,217,255,0.16);
+  background: rgba(130,174,255,0.16);
   animation: floatOrb 12s ease-in-out infinite reverse;
 }
 
@@ -206,13 +206,13 @@ body.light-mode .top-hero-bar {
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  color: #181818;
+  color: #082338;
   font-size: 0.76rem;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, #f4d97d, #d4af37);
-  box-shadow: 0 10px 22px rgba(212,175,55,0.18);
+  background: linear-gradient(135deg, #7deeff, #9bc1ff 62%, #dabb69);
+  box-shadow: 0 14px 28px rgba(100,225,255,0.16);
 }
 
 .top-hero-month-shell {
@@ -253,6 +253,7 @@ body.light-mode .top-hero-month-label {
   text-align: center;
   justify-self: center;
   min-width: 0;
+  padding: 0;
 }
 
 .theme-toggle-btn {
@@ -268,7 +269,7 @@ body.light-mode .top-hero-month-label {
   border-radius: var(--radius);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
 body.light-mode .glass-card,
@@ -315,13 +316,14 @@ body.light-mode .glass-subcard {
   font-weight: 900;
   letter-spacing: -0.02em;
   text-wrap: balance;
+  text-shadow: none;
 }
 
 .month-nav-btn {
   width: 42px;
   height: 42px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.06);
+  border: none;
   background:
     linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)),
     rgba(255, 255, 255, 0.02);
@@ -331,20 +333,20 @@ body.light-mode .glass-subcard {
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.08),
     0 10px 20px rgba(0,0,0,0.10);
-  transition: 0.2s ease;
+  transition: transform 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, color 0.22s ease;
 }
 
 .month-nav-btn:hover {
-  border-color: rgba(212, 175, 55, 0.18);
   background:
-    linear-gradient(145deg, rgba(255,255,255,0.14), rgba(212, 175, 55, 0.10)),
-    rgba(212, 175, 55, 0.06);
+    linear-gradient(145deg, rgba(255,255,255,0.14), rgba(100, 225, 255, 0.10)),
+    rgba(100, 225, 255, 0.06);
   transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgba(212,175,55,0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 12px 22px rgba(100,225,255,0.12);
 }
 
 body.light-mode .month-nav-btn {
-  border-color: rgba(95, 72, 32, 0.12);
   background:
     linear-gradient(145deg, rgba(255,255,255,0.98), rgba(242,234,219,0.96)),
     rgba(255, 255, 255, 0.84);
@@ -363,12 +365,232 @@ body.light-mode .month-nav-btn:hover {
   font-size: 1rem;
 }
 
-.month-picker-input {
+.month-picker-dialog {
+  width: min(720px, calc(100% - 32px));
+  overflow: hidden;
+  position: relative;
+  background:
+    radial-gradient(circle at top right, rgba(212,175,55,0.16), transparent 28%),
+    radial-gradient(circle at left bottom, rgba(66,217,255,0.10), transparent 22%),
+    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+    var(--card-bg);
+}
+
+.month-picker-glow {
   position: absolute;
-  opacity: 0;
+  border-radius: 999px;
+  filter: blur(42px);
+  opacity: 0.5;
   pointer-events: none;
-  width: 1px;
-  height: 1px;
+}
+
+.month-picker-glow-1 {
+  width: 180px;
+  height: 180px;
+  top: -90px;
+  right: -50px;
+  background: rgba(212,175,55,0.22);
+}
+
+.month-picker-glow-2 {
+  width: 160px;
+  height: 160px;
+  left: -70px;
+  bottom: -80px;
+  background: rgba(66,217,255,0.16);
+}
+
+.month-picker-head,
+.month-picker-toolbar,
+.month-picker-grid {
+  position: relative;
+  z-index: 1;
+}
+
+.month-picker-overline {
+  margin: 0 0 6px;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.month-picker-head {
+  margin-bottom: 18px;
+}
+
+.month-picker-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+    rgba(255,255,255,0.02);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 16px 30px rgba(0,0,0,0.12);
+}
+
+.month-picker-year-wrap {
+  text-align: center;
+}
+
+.month-picker-year-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-soft);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.month-picker-year-wrap strong {
+  font-size: 1.5rem;
+  letter-spacing: -0.03em;
+}
+
+.month-picker-year-btn {
+  width: 46px;
+  height: 46px;
+  border: none;
+  border-radius: 16px;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 1.1rem;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04)),
+    rgba(255,255,255,0.03);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 12px 24px rgba(0,0,0,0.10);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.month-picker-year-btn:hover {
+  transform: translateY(-2px);
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.16), rgba(212,175,55,0.10)),
+    rgba(212,175,55,0.06);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.10),
+    0 16px 28px rgba(212,175,55,0.12);
+}
+
+.month-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.month-tile {
+  position: relative;
+  overflow: hidden;
+  min-height: 108px;
+  padding: 16px;
+  border: none;
+  border-radius: 22px;
+  text-align: left;
+  color: var(--text-main);
+  cursor: pointer;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.03)),
+    rgba(255,255,255,0.02);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 16px 28px rgba(0,0,0,0.10);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease;
+}
+
+.month-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 58%);
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.month-tile:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 20px 32px rgba(212,175,55,0.12);
+}
+
+.month-tile-name,
+.month-tile-meta {
+  position: relative;
+  z-index: 1;
+}
+
+.month-tile-name {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.month-tile-meta {
+  color: var(--text-soft);
+  font-size: 0.8rem;
+}
+
+.month-tile.is-current {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.14), rgba(66,217,255,0.08)),
+    rgba(66,217,255,0.04);
+}
+
+.month-tile.is-selected {
+  color: #16120a;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.08)),
+    linear-gradient(135deg, #ffe9ad, #f4d97d 34%, #d4af37 78%, #b98722);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.34),
+    0 22px 36px rgba(212,175,55,0.18);
+}
+
+.month-tile.is-selected .month-tile-meta {
+  color: rgba(38, 27, 8, 0.72);
+}
+
+body.light-mode .month-picker-dialog {
+  background:
+    radial-gradient(circle at top right, rgba(212,175,55,0.18), transparent 28%),
+    radial-gradient(circle at left bottom, rgba(94,190,255,0.10), transparent 22%),
+    linear-gradient(145deg, rgba(255,255,255,0.99), rgba(246,239,228,0.95)),
+    var(--card-bg);
+}
+
+body.light-mode .month-picker-toolbar,
+body.light-mode .month-tile {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.98), rgba(243,236,224,0.92)),
+    rgba(255,255,255,0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.96),
+    0 14px 26px rgba(120, 92, 40, 0.08);
+}
+
+body.light-mode .month-picker-year-label,
+body.light-mode .month-tile-meta {
+  color: rgba(84, 64, 33, 0.7);
+}
+
+body.light-mode .month-picker-year-btn {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,1), rgba(243,235,221,0.96)),
+    rgba(255,255,255,0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.98),
+    0 12px 24px rgba(120, 92, 40, 0.08);
 }
 
 .month-calendar-card {
@@ -581,16 +803,16 @@ body.light-mode .month-nav-btn:hover {
 
 .btn-gold {
   color: #171717;
-  border: 1px solid rgba(255, 236, 177, 0.34);
+  border: none;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0.08) 34%, transparent 35%),
-    linear-gradient(135deg, #ffe8a6 0%, #f4d97d 16%, #d4af37 46%, #b5841f 78%, #8f6514 100%);
+    linear-gradient(135deg, #7deeff 0%, #9bc1ff 56%, #dabb69 100%);
   background-size: 100% 100%, 180% 180%;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.56),
-    inset 0 -2px 0 rgba(90, 57, 4, 0.26),
-    0 8px 18px rgba(212, 175, 55, 0.22),
-    0 16px 28px rgba(97, 67, 14, 0.18);
+    inset 0 -2px 0 rgba(36, 57, 88, 0.18),
+    0 8px 18px rgba(100, 225, 255, 0.20),
+    0 16px 28px rgba(65, 113, 184, 0.16);
   text-shadow: 0 1px 0 rgba(255,255,255,0.26);
   animation: goldButtonGlow 5.5s ease-in-out infinite;
 }
@@ -622,9 +844,9 @@ body.light-mode .month-nav-btn:hover {
   transform: translateY(-2px) scale(1.01);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.62),
-    inset 0 -2px 0 rgba(90, 57, 4, 0.32),
-    0 12px 24px rgba(212, 175, 55, 0.26),
-    0 22px 34px rgba(97, 67, 14, 0.22);
+    inset 0 -2px 0 rgba(36, 57, 88, 0.24),
+    0 12px 24px rgba(100, 225, 255, 0.22),
+    0 22px 34px rgba(65, 113, 184, 0.20);
   filter: brightness(1.03);
 }
 
@@ -637,30 +859,32 @@ body.light-mode .month-nav-btn:hover {
 .btn-gold:active {
   transform: translateY(1px) scale(0.995);
   box-shadow:
-    inset 0 2px 5px rgba(90, 57, 4, 0.18),
+    inset 0 2px 5px rgba(36, 57, 88, 0.16),
     inset 0 1px 0 rgba(255,255,255,0.34),
-    0 6px 14px rgba(212, 175, 55, 0.18);
+    0 6px 14px rgba(100, 225, 255, 0.16);
 }
 
 .btn-gold:focus-visible {
   outline: none;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.62),
-    inset 0 -2px 0 rgba(90, 57, 4, 0.28),
-    0 0 0 3px rgba(255, 228, 147, 0.18),
-    0 0 0 6px rgba(212, 175, 55, 0.14),
-    0 16px 30px rgba(97, 67, 14, 0.22);
+    inset 0 -2px 0 rgba(36, 57, 88, 0.22),
+    0 0 0 3px rgba(125, 238, 255, 0.18),
+    0 0 0 6px rgba(100, 225, 255, 0.12),
+    0 16px 30px rgba(65, 113, 184, 0.20);
 }
 
 .btn-ghost {
   color: var(--text-main);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
+    rgba(255, 255, 255, 0.03);
+  border: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 body.light-mode .btn-ghost {
   background: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(245,238,226,0.92));
-  border-color: rgba(95, 72, 32, 0.14);
   color: #2b241c;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.92),
@@ -668,8 +892,9 @@ body.light-mode .btn-ghost {
 }
 
 .btn-ghost:hover {
-  border-color: rgba(212, 175, 55, 0.45);
-  background: rgba(212, 175, 55, 0.06);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(100,225,255,0.04)),
+    rgba(100, 225, 255, 0.04);
   transform: translateY(-1px);
 }
 
@@ -677,13 +902,13 @@ body.light-mode .btn-ghost:hover {
   background:
     linear-gradient(180deg, rgba(255,255,255,1), rgba(246,238,220,0.96)),
     rgba(212, 175, 55, 0.08);
-  border-color: rgba(212, 175, 55, 0.32);
 }
 
 .btn-danger {
   color: #fff;
-  background: linear-gradient(135deg, rgba(255, 107, 107, 1), rgba(214, 69, 69, 1));
-  box-shadow: 0 10px 24px rgba(255, 107, 107, 0.20);
+  border: none;
+  background: linear-gradient(135deg, rgba(255, 120, 120, 1), rgba(214, 69, 69, 1));
+  box-shadow: 0 12px 24px rgba(255, 107, 107, 0.22);
 }
 
 .btn-danger:hover {
@@ -708,19 +933,19 @@ body.light-mode .btn-ghost:hover {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .income-kpi::before {
-  background: radial-gradient(circle at top right, rgba(115, 226, 155, 0.12), transparent 35%);
+  background: radial-gradient(circle at top right, rgba(115, 226, 155, 0.16), transparent 35%);
 }
 
 .expense-kpi::before {
-  background: radial-gradient(circle at top right, rgba(255, 126, 209, 0.12), transparent 35%);
+  background: radial-gradient(circle at top right, rgba(255, 126, 209, 0.16), transparent 35%);
 }
 
 .balance-kpi::before {
-  background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.12), transparent 35%);
+  background: radial-gradient(circle at top right, rgba(100, 225, 255, 0.16), transparent 35%);
 }
 
 .kpi-card span {
@@ -733,11 +958,11 @@ body.light-mode .btn-ghost:hover {
   display: block;
   font-size: clamp(1.6rem, 3vw, 2.2rem);
   margin-bottom: 8px;
-  text-shadow: 0 8px 24px rgba(212,175,55,0.10);
+  text-shadow: 0 10px 24px rgba(100,225,255,0.08);
 }
 
 .kpi-card small {
-  color: var(--gold-strong);
+  color: rgba(186, 238, 254, 0.84);
 }
 
 body.light-mode .kpi-card small {
@@ -756,8 +981,8 @@ body.light-mode .kpi-card small {
   padding: 18px 18px 20px;
   border-radius: 24px;
   background:
-    radial-gradient(circle at top right, rgba(212,175,55,0.14), transparent 24%),
-    radial-gradient(circle at left center, rgba(66,217,255,0.10), transparent 22%),
+    radial-gradient(circle at top right, rgba(100,225,255,0.14), transparent 24%),
+    radial-gradient(circle at left center, rgba(130,174,255,0.10), transparent 22%),
     linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)),
     var(--card-bg);
   box-shadow:
@@ -846,9 +1071,9 @@ body.light-mode .quick-add-card-v3 {
   border-radius: 999px;
   font-size: 0.74rem;
   font-weight: 800;
-  color: #151515;
-  background: linear-gradient(135deg, var(--gold), var(--gold-strong));
-  box-shadow: 0 12px 24px rgba(212,175,55,0.18);
+  color: #082338;
+  background: linear-gradient(135deg, #7deeff, #9bc1ff 62%, #dabb69);
+  box-shadow: 0 12px 24px rgba(100,225,255,0.16);
   white-space: nowrap;
 }
 
@@ -875,15 +1100,18 @@ body.light-mode .quick-add-card-v3 {
 .quick-type-switch-v3 .type-switch-btn {
   height: 46px;
   border-radius: 14px;
-  border: 1px solid transparent;
+  border: none;
   font-size: 0.92rem;
   font-weight: 800;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+  opacity: 0.76;
+  filter: saturate(0.88);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
 }
 
 .quick-type-switch-v3 .type-switch-btn:hover {
   transform: translateY(-1px);
-  opacity: 0.96;
+  opacity: 0.92;
+  filter: saturate(1);
 }
 
 .type-switch-expense {
@@ -891,7 +1119,6 @@ body.light-mode .quick-add-card-v3 {
     linear-gradient(180deg, rgba(255,255,255,0.16), transparent 42%),
     linear-gradient(135deg, rgba(255, 165, 142, 0.48), rgba(255, 84, 116, 0.34) 55%, rgba(209, 38, 77, 0.24));
   color: #ffe8e1;
-  border-color: rgba(255,122,122,0.44);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
@@ -900,7 +1127,6 @@ body.light-mode .quick-add-card-v3 {
     linear-gradient(180deg, rgba(255,255,255,0.16), transparent 42%),
     linear-gradient(135deg, rgba(138, 255, 198, 0.48), rgba(61, 213, 135, 0.34) 55%, rgba(11, 139, 94, 0.22));
   color: #e8fff0;
-  border-color: rgba(115,226,155,0.44);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
@@ -909,7 +1135,6 @@ body.light-mode .quick-add-card-v3 {
     linear-gradient(180deg, rgba(255,255,255,0.16), transparent 42%),
     linear-gradient(135deg, rgba(119, 233, 255, 0.48), rgba(71, 162, 255, 0.34) 55%, rgba(53, 92, 224, 0.24));
   color: #e7faff;
-  border-color: rgba(66,217,255,0.44);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
 }
 
@@ -918,11 +1143,15 @@ body.light-mode .quick-add-card-v3 {
     linear-gradient(180deg, rgba(255,255,255,0.22), transparent 34%),
     linear-gradient(135deg, #ffb08e 0%, #ff5b74 42%, #ce234d 100%);
   color: #ffffff;
-  border-color: rgba(255, 184, 168, 0.42);
+  opacity: 1;
+  filter: saturate(1.14);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.24),
     0 12px 24px rgba(255,122,122,0.28),
-    0 0 22px rgba(255,91,116,0.22);
+    0 0 22px rgba(255,91,116,0.22),
+    0 0 0 2px rgba(255, 193, 193, 0.34),
+    0 0 0 5px rgba(255, 91, 116, 0.14);
+  transform: translateY(-1px) scale(1.02);
 }
 
 .type-switch-income.active {
@@ -930,7 +1159,8 @@ body.light-mode .quick-add-card-v3 {
     linear-gradient(180deg, rgba(255,255,255,0.22), transparent 34%),
     linear-gradient(135deg, #99f7c6 0%, #31da88 42%, #04935f 100%);
   color: #042516;
-  border-color: rgba(188, 255, 220, 0.42);
+  opacity: 1;
+  filter: saturate(1.06);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.24),
     0 12px 24px rgba(115,226,155,0.28),
@@ -942,7 +1172,8 @@ body.light-mode .quick-add-card-v3 {
     linear-gradient(180deg, rgba(255,255,255,0.22), transparent 34%),
     linear-gradient(135deg, #85ecff 0%, #43b9ff 42%, #3c65ef 100%);
   color: #071925;
-  border-color: rgba(182, 238, 255, 0.42);
+  opacity: 1;
+  filter: saturate(1.06);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.24),
     0 12px 24px rgba(66,217,255,0.28),
@@ -965,12 +1196,12 @@ body.light-mode .quick-add-card-v3 {
   padding: 14px;
   border-radius: 18px;
   background:
-    linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025)),
+    linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.025)),
     rgba(255,255,255,0.02);
   border: 1px solid rgba(255,255,255,0.08);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.05),
-    0 12px 24px rgba(0,0,0,0.10);
+    0 14px 26px rgba(0,0,0,0.10);
   transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
 }
 
@@ -986,7 +1217,7 @@ body.light-mode .quick-grid-v3 .form-group {
 
 .quick-grid-v3 .form-group:hover {
   transform: translateY(-2px);
-  border-color: rgba(212,175,55,0.18);
+  border-color: rgba(100,225,255,0.18);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.06),
     0 18px 30px rgba(0,0,0,0.12);
@@ -1094,7 +1325,7 @@ body.light-mode .quick-form-footer {
 }
 
 .quick-category-chip {
-  border: 1px solid rgba(255,255,255,0.08);
+  border: none;
   background:
     linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03)),
     rgba(255,255,255,0.02);
@@ -1110,7 +1341,6 @@ body.light-mode .quick-form-footer {
 
 .quick-category-chip:hover,
 .quick-category-chip.is-active {
-  border-color: rgba(212,175,55,0.32);
   color: var(--text-main);
   background:
     linear-gradient(145deg, rgba(255,255,255,0.10), rgba(212,175,55,0.08)),
@@ -1119,7 +1349,6 @@ body.light-mode .quick-form-footer {
 }
 
 body.light-mode .quick-category-chip {
-  border-color: rgba(95, 72, 32, 0.10);
   background:
     linear-gradient(145deg, rgba(255,255,255,0.98), rgba(243,236,224,0.92)),
     rgba(255,255,255,0.9);
@@ -1129,7 +1358,6 @@ body.light-mode .quick-category-chip {
 body.light-mode .quick-category-chip:hover,
 body.light-mode .quick-category-chip.is-active {
   color: #241c14;
-  border-color: rgba(212,175,55,0.28);
   background:
     linear-gradient(145deg, rgba(255,255,255,1), rgba(247,237,211,0.96)),
     rgba(212,175,55,0.10);
@@ -1137,8 +1365,8 @@ body.light-mode .quick-category-chip.is-active {
 
 .quick-grid-v3 .form-group input:focus,
 .quick-grid-v3 .form-group select:focus {
-  border-color: rgba(212,175,55,0.55);
-  box-shadow: 0 0 0 3px rgba(212,175,55,0.10), 0 10px 24px rgba(212,175,55,0.08);
+  border-color: rgba(100,225,255,0.55);
+  box-shadow: 0 0 0 3px rgba(100,225,255,0.10), 0 10px 24px rgba(100,225,255,0.08);
   transform: translateY(-1px);
 }
 
@@ -1712,6 +1940,7 @@ body.light-mode .calendar-day-count {
 }
 
 .enhancements-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 16px;
 }
@@ -1798,15 +2027,59 @@ body.light-mode .calendar-day-count {
 .modal-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 14px;
 }
 
 .goal-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-areas:
+    "goal-name goal-target"
+    "goal-current goal-contribution"
+    ". goal-actions";
+  align-items: end;
 }
 
 .recurring-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-areas:
+    "recurring-title recurring-amount"
+    "recurring-type recurring-category"
+    "recurring-day recurring-actions";
+  align-items: end;
+}
+
+.goal-name-field {
+  grid-area: goal-name;
+}
+
+.goal-target-field {
+  grid-area: goal-target;
+}
+
+.goal-current-field {
+  grid-area: goal-current;
+}
+
+.goal-contribution-field {
+  grid-area: goal-contribution;
+}
+
+.recurring-title-field {
+  grid-area: recurring-title;
+}
+
+.recurring-amount-field {
+  grid-area: recurring-amount;
+}
+
+.recurring-type-field {
+  grid-area: recurring-type;
+}
+
+.recurring-category-field {
+  grid-area: recurring-category;
+}
+
+.recurring-day-field {
+  grid-area: recurring-day;
 }
 
 .goal-form-actions,
@@ -1818,18 +2091,30 @@ body.light-mode .calendar-day-count {
   margin-top: 14px;
 }
 
+.goal-form-actions {
+  grid-area: goal-actions;
+  margin-top: 0;
+  align-self: end;
+}
+
+.recurring-form-actions {
+  grid-area: recurring-actions;
+  margin-top: 0;
+  align-self: end;
+}
+
 .goals-list,
 .recurring-list,
 .smart-insights {
   display: grid;
-  gap: 10px;
+  gap: 14px;
 }
 
 .goal-item,
 .recurring-item,
 .insight-card {
-  padding: 12px 14px;
-  border-radius: 16px;
+  padding: 12px;
+  border-radius: 18px;
   background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 12px 24px rgba(0,0,0,0.12);
@@ -1854,6 +2139,28 @@ body.light-mode .calendar-day-count {
 
 .goal-item-top {
   margin-bottom: 8px;
+}
+
+.goal-item-row,
+.recurring-item-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.goal-item-main,
+.recurring-item-main,
+.goal-item-side,
+.recurring-item-side {
+  min-width: 0;
+}
+
+.goal-item-side,
+.recurring-item-side {
+  display: grid;
+  gap: 10px;
+  align-content: start;
 }
 
 .goal-name,
@@ -1884,8 +2191,8 @@ body.light-mode .calendar-day-count {
 }
 
 .goal-progress {
-  margin: 8px 0;
-  height: 6px;
+  margin: 10px 0 12px;
+  height: 8px;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(255,255,255,0.08);
@@ -1914,12 +2221,128 @@ body.light-mode .calendar-day-count {
 }
 
 .recurring-item-top {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .recurring-item .type-badge {
   margin-left: auto;
 }
+
+.recurring-item-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.recurring-item-main {
+  min-width: 0;
+}
+
+.recurring-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.recurring-title-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  box-shadow: 0 0 14px rgba(255,255,255,0.18);
+}
+
+.recurring-title-dot.type-expense {
+  background: linear-gradient(135deg, #ff8b8b, #ff5f86);
+  box-shadow: 0 0 14px rgba(255,95,134,0.30);
+}
+
+.recurring-title-dot.type-income {
+  background: linear-gradient(135deg, #8ff0b0, #32d48a);
+  box-shadow: 0 0 14px rgba(50,212,138,0.28);
+}
+
+.recurring-title-dot.type-investment,
+.recurring-title-dot.type-tithe {
+  background: linear-gradient(135deg, #7be4ff, #5a92ff);
+  box-shadow: 0 0 14px rgba(90,146,255,0.28);
+}
+
+.recurring-meta-inline {
+  margin-top: 6px;
+  gap: 6px 10px;
+  font-size: 0.76rem;
+  align-items: center;
+}
+
+.recurring-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)),
+    rgba(255,255,255,0.03);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.recurring-meta-amount {
+  color: var(--gold-strong);
+  font-weight: 800;
+}
+
+.recurring-meta-subtle {
+  color: var(--text-soft);
+  font-size: 0.73rem;
+  white-space: nowrap;
+}
+
+.recurring-item-side {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.recurring-actions-compact {
+  align-items: center;
+  gap: 6px;
+}
+
+.recurring-actions-compact .btn {
+  min-width: 0;
+}
+
+.recurring-actions-compact .btn-ghost {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 0.76rem;
+}
+
+body.light-mode .recurring-meta-pill {
+  background:
+    linear-gradient(145deg, rgba(255,255,255,0.98), rgba(243,236,224,0.92)),
+    rgba(255,255,255,0.92);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.96),
+    0 8px 14px rgba(120, 92, 40, 0.04);
+}
+
+@media (max-width: 560px) {
+  .recurring-item-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .recurring-item-side {
+    justify-items: start;
+  }
+
+  .recurring-actions-compact {
+    justify-content: flex-start;
+  }
+}
+
 
 .smart-insights {
   margin-top: 2px;
@@ -2685,10 +3108,6 @@ body.light-mode #transactionCategory {
     grid-template-columns: 1fr 1fr;
   }
 
-  .recurring-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .smart-insights {
     grid-template-columns: 1fr;
   }
@@ -2700,6 +3119,12 @@ body.light-mode #transactionCategory {
   .form-group {
     grid-column: span 6;
   }
+
+  .goal-item-row,
+  .recurring-item-row {
+    grid-template-columns: 1fr;
+  }
+
 }
 
 @media (max-width: 760px) {
@@ -2732,6 +3157,10 @@ body.light-mode #transactionCategory {
 
   .top-hero-month {
     grid-template-columns: 40px minmax(0, 1fr) 40px 40px;
+  }
+
+  .month-picker-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .kpi-grid,
@@ -2873,6 +3302,25 @@ body.light-mode #transactionCategory {
   .recurring-grid,
   .modal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .goal-grid {
+    grid-template-areas:
+      "goal-name"
+      "goal-target"
+      "goal-current"
+      "goal-contribution"
+      "goal-actions";
+  }
+
+  .recurring-grid {
+    grid-template-areas:
+      "recurring-title"
+      "recurring-amount"
+      "recurring-type"
+      "recurring-category"
+      "recurring-day"
+      "recurring-actions";
   }
 
   .modal-dialog {

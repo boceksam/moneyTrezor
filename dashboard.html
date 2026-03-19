@@ -17,10 +17,10 @@
       <div class="top-hero-glow top-hero-glow-2"></div>
 
       <div class="top-hero-copy">
-        <p class="eyebrow">Finance dashboard</p>
+        <p class="eyebrow">Přehled financí</p>
         <div class="top-hero-title-row">
           <h1>Trezor výdajů</h1>
-          <span class="top-hero-badge">Premium flow</span>
+          <span class="top-hero-badge">Aktivní měsíc</span>
         </div>
       </div>
 
@@ -32,7 +32,6 @@
             <h2 id="currentMonthLabel">-</h2>
           </div>
           <button id="openMonthPickerBtn" class="month-nav-btn month-picker-btn" type="button" aria-label="Vybrat měsíc">📅</button>
-          <input id="monthPickerInput" class="month-picker-input" type="month" />
           <button id="nextMonthBtn" class="month-nav-btn" type="button">→</button>
         </div>
       </div>
@@ -77,9 +76,9 @@
       <div class="section-head compact-head quick-add-head-v3">
         <div>
           <h2>Rychlé přidání</h2>
-          <p>Vlož transakci rychle, čistě a bez přemýšlení navíc.</p>
+          <p>Vlož transakci rychle, čistě a bez zbytečného přepínání.</p>
         </div>
-        <div class="quick-add-badge-v3">Smart add</div>
+        <div class="quick-add-badge-v3">Rychlý vstup</div>
       </div>
 
       <form id="quickTransactionForm" class="quick-add-form quick-add-form-v3">
@@ -283,29 +282,29 @@
         <form id="goalForm" class="goal-form">
           <input type="hidden" id="goalId" value="" />
           <div class="goal-grid">
-            <div class="form-group">
+            <div class="form-group goal-name-field">
               <label for="goalName">Cíl</label>
               <input type="text" id="goalName" placeholder="Např. Nouzová rezerva" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group goal-target-field">
               <label for="goalTarget">Cílová částka</label>
               <input type="number" id="goalTarget" min="0" step="0.01" placeholder="Např. 100000" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group goal-current-field">
               <label for="goalCurrent">Aktuálně naspořeno</label>
               <input type="number" id="goalCurrent" min="0" step="0.01" placeholder="Např. 28000" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group goal-contribution-field">
               <label for="goalContribution">Měsíční vklad</label>
               <input type="number" id="goalContribution" min="0" step="0.01" placeholder="Např. 3000" />
             </div>
-          </div>
 
-          <div class="goal-form-actions">
-            <button id="goalSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit cíl</button>
+            <div class="goal-form-actions">
+              <button id="goalSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit cíl</button>
+            </div>
           </div>
         </form>
 
@@ -323,17 +322,17 @@
         <form id="recurringForm" class="recurring-form">
           <input type="hidden" id="recurringId" value="" />
           <div class="recurring-grid">
-            <div class="form-group">
+            <div class="form-group recurring-title-field">
               <label for="recurringTitle">Název</label>
               <input type="text" id="recurringTitle" placeholder="Např. Nájem" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group recurring-amount-field">
               <label for="recurringAmount">Částka</label>
               <input type="number" id="recurringAmount" min="0" step="0.01" placeholder="Např. 14500" />
             </div>
 
-            <div class="form-group">
+            <div class="form-group recurring-type-field">
               <label for="recurringType">Typ</label>
               <select id="recurringType">
                 <option value="expense">Výdaj</option>
@@ -343,19 +342,19 @@
               </select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group recurring-category-field">
               <label for="recurringCategory">Kategorie</label>
               <select id="recurringCategory"></select>
             </div>
 
-            <div class="form-group">
+            <div class="form-group recurring-day-field">
               <label for="recurringDay">Den v měsíci</label>
               <input type="number" id="recurringDay" min="1" max="31" step="1" placeholder="Např. 15" />
             </div>
-          </div>
 
-          <div class="recurring-form-actions">
-            <button id="recurringSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit platbu</button>
+            <div class="recurring-form-actions">
+              <button id="recurringSubmitBtn" type="submit" class="btn btn-gold btn-small">Uložit platbu</button>
+            </div>
           </div>
         </form>
 
@@ -537,6 +536,33 @@
           <button type="submit" class="btn btn-gold btn-small">Uložit změny</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div id="monthPickerModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-month-modal="true"></div>
+    <div class="modal-dialog month-picker-dialog glass-card" role="dialog" aria-modal="true" aria-labelledby="monthPickerTitle">
+      <div class="month-picker-glow month-picker-glow-1"></div>
+      <div class="month-picker-glow month-picker-glow-2"></div>
+
+      <div class="modal-head month-picker-head">
+        <div>
+          <p class="month-picker-overline">Výběr období</p>
+          <h2 id="monthPickerTitle">Roční přehled měsíců</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeMonthPickerModal" aria-label="Zavřít">×</button>
+      </div>
+
+      <div class="month-picker-toolbar">
+        <button id="monthPickerPrevYear" class="month-picker-year-btn" type="button">←</button>
+        <div class="month-picker-year-wrap">
+          <span class="month-picker-year-label">Rok</span>
+          <strong id="monthPickerYearLabel">-</strong>
+        </div>
+        <button id="monthPickerNextYear" class="month-picker-year-btn" type="button">→</button>
+      </div>
+
+      <div id="monthPickerGrid" class="month-picker-grid"></div>
     </div>
   </div>
 
