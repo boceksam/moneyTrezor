@@ -6,9 +6,21 @@ const THEME_KEY = "trezor_vydaju_theme";
 const SESSION_KEY = "trezor_vydaju_session";
 const USERS_KEY = "trezor_vydaju_users";
 const STORAGE_KEY = "trezor_vydaju_transactions";
+const BACKEND_MIGRATION_KEY = "trezor_vydaju_backend_imported";
 
 let currentUser = null;
 let transactionsData = [];
+let budgetsCache = null;
+let customCategoriesCache = null;
+let goalsCache = null;
+let recurringPlansCache = null;
+let adminUsersCache = [];
+let editingAdminUserId = "";
+let selectedMonthCacheKey = "";
+let selectedMonthCacheData = [];
+let monthTransactionsCache = new Map();
+let monthTotalsCache = new Map();
+let transactionsFilterTimer = null;
 
 let selectedMonth = new Date().getMonth();
 let selectedYear = new Date().getFullYear();
@@ -23,6 +35,62 @@ const RULE_TARGETS = {
   fun: 26,
   savings: 16,
   tithe: 10
+};
+
+const RULE_CATEGORY_BUCKETS = {
+  fun: [
+    "zábava",
+    "zabava",
+    "volný čas",
+    "volny cas",
+    "restaurace",
+    "cestování",
+    "cestovani",
+    "hobby",
+    "kino",
+    "koncert",
+    "dovolená",
+    "dovolena",
+    "stream",
+    "netflix",
+    "spotify",
+    "playstation",
+    "xbox",
+    "hra",
+    "hry",
+    "káva",
+    "kava",
+    "bar",
+    "party"
+  ],
+  needs: [
+    "bydlení",
+    "bydleni",
+    "nájem",
+    "najem",
+    "jídlo",
+    "jidlo",
+    "potraviny",
+    "doprava",
+    "zdraví",
+    "zdravi",
+    "drogerie",
+    "splátky",
+    "splatky",
+    "pojištění",
+    "pojisteni",
+    "energie",
+    "elektřina",
+    "elektrina",
+    "plyn",
+    "voda",
+    "internet",
+    "telefon",
+    "škola",
+    "skola",
+    "děti",
+    "deti"
+  ]
 };
 
 const QUICK_CATEGORIES = {
@@ -71,9 +139,14 @@ const centerTextPlugin = {
     const x = meta.data[0].x;
     const y = meta.data[0].y;
     const innerRadius = meta.data[0].innerRadius || 70;
+    const safeRadius = Math.max(innerRadius - 6, 0);
     const activeElement = chart.getActiveElements?.()[0];
     const labels = chart.data?.labels || [];
     const dataset = chart.data?.datasets?.[0];
+
+    if (!Number.isFinite(x) || !Number.isFinite(y) || safeRadius <= 0) {
+      return;
+    }
 
     let label = pluginOptions?.labelText || "";
     let total = pluginOptions?.totalText || "";
@@ -115,12 +188,12 @@ const centerTextPlugin = {
     ctx.textBaseline = "middle";
 
     ctx.beginPath();
-    ctx.arc(x, y, innerRadius - 6, 0, Math.PI * 2);
+    ctx.arc(x, y, safeRadius, 0, Math.PI * 2);
     ctx.fillStyle = pluginOptions?.backdropColor || "rgba(9, 14, 22, 0.82)";
     ctx.fill();
 
     ctx.beginPath();
-    ctx.arc(x, y, innerRadius - 6, 0, Math.PI * 2);
+    ctx.arc(x, y, safeRadius, 0, Math.PI * 2);
     ctx.strokeStyle = pluginOptions?.backdropBorderColor || "rgba(255,255,255,0.06)";
     ctx.lineWidth = 1;
     ctx.stroke();
@@ -166,75 +239,245 @@ const premiumGlowPlugin = {
 };
 
 function getSession() {
+  return window.MonetraApi?.getSession() || null;
+}
+
+function getSessionUser() {
+  return getSession()?.user || null;
+}
+
+function getApiToken() {
+  return getSession()?.token || "";
+}
+
+function getLegacyUsers() {
+  const users = readStorageJson(USERS_KEY, []);
+  return Array.isArray(users) ? users : [];
+}
+
+function getLegacySessionUser() {
   try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+    const raw = JSON.parse(localStorage.getItem(SESSION_KEY));
+    if (raw && typeof raw === "object" && !raw.token && raw.id && raw.email) {
+      return raw;
+    }
   } catch {
     return null;
   }
+
+  return null;
 }
 
-function getAllTransactions() {
+function getLegacyUserByEmail(email) {
+  const normalizedEmail = normalizeText(email);
+  return getLegacyUsers().find(user => normalizeText(user.email) === normalizedEmail) || null;
+}
+
+function getLegacyTransactionsForUser(userId) {
+  if (!userId) return [];
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    return (JSON.parse(localStorage.getItem(STORAGE_KEY)) || [])
+      .filter(transaction => transaction.userId === userId)
+      .map(normalizeTransactionRecord);
   } catch {
     return [];
   }
 }
 
+function getAllTransactions() {
+  return [...transactionsData];
+}
+
 function saveAllTransactions(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  transactionsData = (data || []).map(normalizeTransactionRecord);
+  invalidateSelectedMonthCache();
 }
 
 function getUserTransactions(userId) {
   return getAllTransactions().filter(t => t.userId === userId);
 }
 
+function readStorageJson(key, fallback) {
+  try {
+    const rawValue = localStorage.getItem(key);
+    return rawValue ? JSON.parse(rawValue) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function getActiveUserId() {
+  return currentUser?.id || getSessionUser()?.id || "";
+}
+
+function cloneScopedValue(value, fallback) {
+  if (Array.isArray(fallback)) {
+    return Array.isArray(value) ? [...value] : [...fallback];
+  }
+
+  if (fallback && typeof fallback === "object") {
+    return value && typeof value === "object" && !Array.isArray(value)
+      ? { ...value }
+      : { ...fallback };
+  }
+
+  return value ?? fallback;
+}
+
+function isLegacyBudgetStore(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  return Object.values(value).every(item => item == null || Number.isFinite(Number(item)));
+}
+
+function getScopedStoreValue(key, fallback, legacyValidator) {
+  const raw = readStorageJson(key, null);
+  const userId = getActiveUserId();
+
+  if (legacyValidator(raw)) {
+    return cloneScopedValue(raw, fallback);
+  }
+
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || !userId) {
+    return cloneScopedValue(null, fallback);
+  }
+
+  return cloneScopedValue(raw[userId], fallback);
+}
+
+function saveScopedStoreValue(key, value, fallback) {
+  const userId = getActiveUserId();
+  if (!userId) {
+    return cloneScopedValue(value, fallback);
+  }
+
+  const raw = readStorageJson(key, {});
+  const scopedStore = raw && typeof raw === "object" && !Array.isArray(raw)
+    ? { ...raw }
+    : {};
+
+  scopedStore[userId] = cloneScopedValue(value, fallback);
+  localStorage.setItem(key, JSON.stringify(scopedStore));
+
+  return scopedStore[userId];
+}
+
 function saveBudgets(data) {
-  localStorage.setItem(BUDGETS_KEY, JSON.stringify(data));
+  budgetsCache = saveScopedStoreValue(BUDGETS_KEY, data, {});
 }
 
 function getBudgets() {
-  try {
-    return JSON.parse(localStorage.getItem(BUDGETS_KEY)) || {};
-  } catch {
-    return {};
-  }
+  if (budgetsCache) return budgetsCache;
+  budgetsCache = getScopedStoreValue(BUDGETS_KEY, {}, isLegacyBudgetStore);
+  return budgetsCache;
 }
 
 function saveCustomCategories(data) {
-  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(data));
+  customCategoriesCache = saveScopedStoreValue(CUSTOM_CATEGORIES_KEY, data, []);
 }
 
 function getCustomCategories() {
-  try {
-    return JSON.parse(localStorage.getItem(CUSTOM_CATEGORIES_KEY)) || [];
-  } catch {
-    return [];
-  }
+  if (customCategoriesCache) return customCategoriesCache;
+  customCategoriesCache = getScopedStoreValue(CUSTOM_CATEGORIES_KEY, [], Array.isArray);
+  return customCategoriesCache;
 }
 
 function saveGoals(data) {
-  localStorage.setItem(GOALS_KEY, JSON.stringify(data));
+  goalsCache = saveScopedStoreValue(GOALS_KEY, data, []);
 }
 
 function getGoals() {
-  try {
-    return JSON.parse(localStorage.getItem(GOALS_KEY)) || [];
-  } catch {
-    return [];
-  }
+  if (goalsCache) return goalsCache;
+  goalsCache = getScopedStoreValue(GOALS_KEY, [], Array.isArray);
+  return goalsCache;
 }
 
 function saveRecurringPlans(data) {
-  localStorage.setItem(RECURRING_KEY, JSON.stringify(data));
+  const normalizedData = (data || []).map(normalizeRecurringPlanRecord);
+  recurringPlansCache = saveScopedStoreValue(RECURRING_KEY, normalizedData, []);
 }
 
 function getRecurringPlans() {
-  try {
-    return JSON.parse(localStorage.getItem(RECURRING_KEY)) || [];
-  } catch {
-    return [];
+  if (recurringPlansCache) return recurringPlansCache;
+  recurringPlansCache = getScopedStoreValue(RECURRING_KEY, [], Array.isArray).map(normalizeRecurringPlanRecord);
+  return recurringPlansCache;
+}
+
+function invalidateSelectedMonthCache() {
+  selectedMonthCacheKey = "";
+  selectedMonthCacheData = [];
+  monthTransactionsCache.clear();
+  monthTotalsCache.clear();
+}
+
+function refreshUserTransactions() {
+  transactionsData = currentUser ? getUserTransactions(currentUser.id).map(normalizeTransactionRecord) : [];
+  invalidateSelectedMonthCache();
+}
+
+function markBackendImportDone(userId) {
+  if (!userId) return;
+  const imported = readStorageJson(BACKEND_MIGRATION_KEY, {});
+  imported[userId] = true;
+  localStorage.setItem(BACKEND_MIGRATION_KEY, JSON.stringify(imported));
+}
+
+function isBackendImportDone(userId) {
+  if (!userId) return false;
+  const imported = readStorageJson(BACKEND_MIGRATION_KEY, {});
+  return Boolean(imported && imported[userId]);
+}
+
+function buildBudgetMap(items) {
+  return (items || []).reduce((acc, item) => {
+    acc[item.category] = Number(item.limitAmount || 0);
+    return acc;
+  }, {});
+}
+
+async function apiRequest(path, options = {}) {
+  if (!window.MonetraApi) {
+    throw new Error("API vrstva není dostupná.");
   }
+
+  return window.MonetraApi.request(path, options);
+}
+
+async function loadBackendState() {
+  const [transactions, budgets, goals, recurringPlans, customCategories] = await Promise.all([
+    apiRequest("/api/transactions"),
+    apiRequest("/api/budgets"),
+    apiRequest("/api/goals"),
+    apiRequest("/api/recurring-plans"),
+    apiRequest("/api/custom-categories")
+  ]);
+
+  transactionsData = (transactions || []).map(normalizeTransactionRecord);
+  budgetsCache = buildBudgetMap(budgets);
+  goalsCache = (goals || []).map(goal => ({
+    ...goal,
+    target: Number(goal.target || 0),
+    current: Number(goal.current || 0),
+    monthlyContribution: Number(goal.monthlyContribution || 0)
+  }));
+  recurringPlansCache = (recurringPlans || []).map(normalizeRecurringPlanRecord);
+  customCategoriesCache = (customCategories || []).map(item => ({
+    ...item,
+    name: item.name || "",
+    type: item.type || "expense"
+  }));
+  invalidateSelectedMonthCache();
+}
+
+function isAdminUser() {
+  return currentUser?.role === "ADMIN";
+}
+
+async function loadAdminUsers() {
+  if (!isAdminUser()) return;
+  adminUsersCache = await apiRequest("/api/admin/users");
 }
 
 function formatCurrency(value) {
@@ -247,7 +490,7 @@ function formatCurrency(value) {
 
 function formatDate(dateString) {
   if (!dateString) return "-";
-  return new Intl.DateTimeFormat("cs-CZ").format(new Date(dateString));
+  return new Intl.DateTimeFormat("cs-CZ").format(parseTransactionDate(dateString));
 }
 
 function toInputDate(date) {
@@ -255,6 +498,169 @@ function toInputDate(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function getTodayInputValue() {
+  return toInputDate(new Date());
+}
+
+function normalizeTransactionDateValue(dateString) {
+  if (!dateString) return "";
+  const parsedDate = parseTransactionDate(dateString);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return String(dateString).trim();
+  }
+  return toInputDate(parsedDate);
+}
+
+function parseTransactionDate(dateString) {
+  if (!dateString) return new Date("");
+
+  const normalized = String(dateString).trim();
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    const [, year, month, day] = match;
+    return new Date(Number(year), Number(month) - 1, Number(day), 12);
+  }
+
+  return new Date(normalized);
+}
+
+function normalizeTransactionRecord(transaction) {
+  if (!transaction || typeof transaction !== "object") {
+    return transaction;
+  }
+
+  return {
+    ...transaction,
+    date: normalizeTransactionDateValue(transaction.date)
+  };
+}
+
+function normalizeRecurringPlanRecord(plan) {
+  if (!plan || typeof plan !== "object") {
+    return plan;
+  }
+
+  return {
+    ...plan,
+    dayOfMonth: Math.min(Math.max(Math.trunc(Number(plan.dayOfMonth || 1)), 1), 31),
+    lastUsedAt: normalizeTransactionDateValue(plan.lastUsedAt)
+  };
+}
+
+async function migrateLocalData() {
+  if (!currentUser || isBackendImportDone(currentUser.id)) {
+    return;
+  }
+
+  const hasBackendData =
+    transactionsData.length ||
+    Object.keys(getBudgets()).length ||
+    getGoals().length ||
+    getRecurringPlans().length ||
+    getCustomCategories().length;
+
+  if (hasBackendData) {
+    markBackendImportDone(currentUser.id);
+    return;
+  }
+
+  const legacyUser = getLegacySessionUser() || getLegacyUserByEmail(currentUser.email);
+  if (!legacyUser) {
+    markBackendImportDone(currentUser.id);
+    return;
+  }
+
+  const legacyTransactions = getLegacyTransactionsForUser(legacyUser.id);
+  const legacyBudgets = readStorageJson(BUDGETS_KEY, {});
+  const legacyCustomCategories = readStorageJson(CUSTOM_CATEGORIES_KEY, []);
+  const legacyGoals = readStorageJson(GOALS_KEY, []);
+  const legacyRecurringPlans = readStorageJson(RECURRING_KEY, []);
+
+  const scopedBudgets = isLegacyBudgetStore(legacyBudgets)
+    ? legacyBudgets
+    : (legacyBudgets?.[legacyUser.id] || {});
+  const scopedCustomCategories = Array.isArray(legacyCustomCategories)
+    ? legacyCustomCategories
+    : (legacyCustomCategories?.[legacyUser.id] || []);
+  const scopedGoals = Array.isArray(legacyGoals)
+    ? legacyGoals
+    : (legacyGoals?.[legacyUser.id] || []);
+  const scopedRecurringPlans = Array.isArray(legacyRecurringPlans)
+    ? legacyRecurringPlans
+    : (legacyRecurringPlans?.[legacyUser.id] || []);
+
+  if (
+    !legacyTransactions.length &&
+    !Object.keys(scopedBudgets || {}).length &&
+    !(scopedCustomCategories || []).length &&
+    !(scopedGoals || []).length &&
+    !(scopedRecurringPlans || []).length
+  ) {
+    markBackendImportDone(currentUser.id);
+    return;
+  }
+
+  await Promise.all([
+    ...legacyTransactions.map(transaction =>
+      apiRequest("/api/transactions", {
+        method: "POST",
+        body: {
+          title: transaction.title,
+          amount: Number(transaction.amount || 0),
+          type: normalizeTransactionType(transaction.type, transaction.category),
+          category: transaction.category || "Ostatní",
+          date: normalizeTransactionDateValue(transaction.date),
+          note: transaction.note || ""
+        }
+      })
+    ),
+    ...Object.entries(scopedBudgets || {}).map(([category, limitAmount]) =>
+      apiRequest(`/api/budgets/${encodeURIComponent(category)}`, {
+        method: "PUT",
+        body: {
+          limitAmount: Number(limitAmount || 0)
+        }
+      })
+    ),
+    ...(scopedGoals || []).map(goal =>
+      apiRequest("/api/goals", {
+        method: "POST",
+        body: {
+          name: goal.name || "Cíl",
+          target: Number(goal.target || 0),
+          current: Number(goal.current || 0),
+          monthlyContribution: Number(goal.monthlyContribution || 0)
+        }
+      })
+    ),
+    ...(scopedRecurringPlans || []).map(plan =>
+      apiRequest("/api/recurring-plans", {
+        method: "POST",
+        body: {
+          title: plan.title || "Opakovaná platba",
+          amount: Number(plan.amount || 0),
+          type: normalizeTransactionType(plan.type, plan.category),
+          category: plan.category || "Ostatní",
+          dayOfMonth: Math.min(Math.max(Math.trunc(Number(plan.dayOfMonth || 1)), 1), 31),
+          lastUsedAt: normalizeTransactionDateValue(plan.lastUsedAt) || null
+        }
+      })
+    ),
+    ...(scopedCustomCategories || []).map(item =>
+      apiRequest("/api/custom-categories", {
+        method: "POST",
+        body: {
+          name: item.name || "",
+          type: item.type || "expense"
+        }
+      }).catch(() => null)
+    )
+  ]);
+
+  markBackendImportDone(currentUser.id);
+  await loadBackendState();
 }
 
 function getDaysInMonth(year, month) {
@@ -283,18 +689,39 @@ function getAllCategoryNames() {
   return [...new Set([...base, ...custom])];
 }
 
+function populateOptionList(target, values, options = {}) {
+  if (!target) return;
+
+  const {
+    placeholder = "",
+    datalist = false,
+    preserveValue = true
+  } = options;
+
+  const selectedBefore = preserveValue ? target.value : "";
+  const safeValues = Array.isArray(values) ? values : [];
+  const optionMarkup = safeValues.map(value => {
+    const escapedValue = escapeHtml(value);
+    return datalist
+      ? `<option value="${escapedValue}"></option>`
+      : `<option value="${escapedValue}">${escapedValue}</option>`;
+  });
+
+  target.innerHTML = [
+    ...(placeholder ? [`<option value="">${placeholder}</option>`] : []),
+    ...optionMarkup
+  ].join("");
+
+  if (!datalist && preserveValue && safeValues.includes(selectedBefore)) {
+    target.value = selectedBefore;
+  }
+}
+
 function renderBudgetCategoryOptions() {
   const select = document.getElementById("budgetCategory");
   if (!select) return;
 
-  const selectedBefore = select.value;
-  const categories = getCategoriesForType("expense");
-  select.innerHTML = categories
-    .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
-    .join("");
-  if (categories.includes(selectedBefore)) {
-    select.value = selectedBefore;
-  }
+  populateOptionList(select, getCategoriesForType("expense"));
 }
 
 function renderRecurringCategoryOptions() {
@@ -302,28 +729,29 @@ function renderRecurringCategoryOptions() {
   const typeSelect = document.getElementById("recurringType");
   if (!select || !typeSelect) return;
 
-  const selectedBefore = select.value;
   const normalizedType = typeSelect.value === "tithe" ? "investment" : typeSelect.value;
-  const categories = getCategoriesForType(normalizedType);
-  select.innerHTML = categories
-    .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
-    .join("");
-  if (categories.includes(selectedBefore)) {
-    select.value = selectedBefore;
-  }
+  populateOptionList(select, getCategoriesForType(normalizedType));
 }
 
 function renderTransactionCategoryDatalist() {
   const list = document.getElementById("transactionCategoryOptions");
   if (!list) return;
 
-  list.innerHTML = getAllCategoryNames()
-    .map(category => `<option value="${escapeHtml(category)}"></option>`)
-    .join("");
+  populateOptionList(list, getAllCategoryNames(), {
+    datalist: true,
+    preserveValue: false
+  });
 }
 
 function normalizeText(value) {
   return (value || "").toString().trim().toLowerCase();
+}
+
+function categoryMatchesRuleBucket(category, keywords = []) {
+  return keywords.some(keyword => {
+    const normalizedKeyword = normalizeText(keyword);
+    return category === normalizedKeyword || category.includes(normalizedKeyword);
+  });
 }
 
 function escapeHtml(value) {
@@ -365,21 +793,31 @@ function getMonthLabel(year, month) {
 }
 
 function isDateInMonth(dateString, year, month) {
-  const date = new Date(dateString);
+  const date = parseTransactionDate(dateString);
   return date.getFullYear() === year && date.getMonth() === month;
 }
 
 function getTransactionsForMonth(year, month) {
-  return transactionsData.filter(t => isDateInMonth(t.date, year, month));
+  const cacheKey = `${year}-${month}`;
+  if (monthTransactionsCache.has(cacheKey)) {
+    return monthTransactionsCache.get(cacheKey);
+  }
+
+  if (cacheKey === selectedMonthCacheKey) {
+    return selectedMonthCacheData;
+  }
+
+  selectedMonthCacheData = transactionsData.filter(t => isDateInMonth(t.date, year, month));
+  selectedMonthCacheKey = cacheKey;
+  monthTransactionsCache.set(cacheKey, selectedMonthCacheData);
+  return selectedMonthCacheData;
 }
 
 function getSelectedMonthTransactions() {
   return getTransactionsForMonth(selectedYear, selectedMonth);
 }
 
-function getSelectedMonthTotals() {
-  const transactions = getSelectedMonthTransactions();
-
+function calculateMonthTotals(transactions) {
   const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
   const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
   const investment = transactions.filter(t => t.type === "investment").reduce((s, t) => s + Number(t.amount), 0);
@@ -394,22 +832,28 @@ function getSelectedMonthTotals() {
   };
 }
 
+function getMonthTotals(year, month) {
+  const cacheKey = `${year}-${month}`;
+  if (monthTotalsCache.has(cacheKey)) {
+    return monthTotalsCache.get(cacheKey);
+  }
+
+  const totals = calculateMonthTotals(getTransactionsForMonth(year, month));
+  monthTotalsCache.set(cacheKey, totals);
+  return totals;
+}
+
+function getSelectedMonthTotals() {
+  return getMonthTotals(selectedYear, selectedMonth);
+}
+
 function getPreviousMonthTotals() {
   const prev = new Date(selectedYear, selectedMonth - 1, 1);
-  const transactions = getTransactionsForMonth(prev.getFullYear(), prev.getMonth());
+  return getMonthTotals(prev.getFullYear(), prev.getMonth());
+}
 
-  const income = transactions.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
-  const expense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
-  const investment = transactions.filter(t => t.type === "investment").reduce((s, t) => s + Number(t.amount), 0);
-  const tithe = transactions.filter(t => t.type === "tithe").reduce((s, t) => s + Number(t.amount), 0);
-
-  return {
-    income,
-    expense,
-    investment,
-    tithe,
-    balance: income - expense - investment - tithe
-  };
+function getExpenseWithInvestmentsTotal(totals) {
+  return Number(totals?.expense || 0) + Number(totals?.investment || 0);
 }
 
 function calculateComparison(current, previous) {
@@ -489,7 +933,8 @@ function selectMonthFromPicker(monthIndex) {
 }
 
 function getCalendarDayTotals(dateString) {
-  const transactions = transactionsData.filter(t => t.date === dateString);
+  const normalizedDate = normalizeTransactionDateValue(dateString);
+  const transactions = transactionsData.filter(t => normalizeTransactionDateValue(t.date) === normalizedDate);
   const income = transactions
     .filter(t => t.type === "income")
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -502,6 +947,26 @@ function getCalendarDayTotals(dateString) {
     expense,
     count: transactions.length
   };
+}
+
+function buildCalendarTotalsMap() {
+  return transactionsData.reduce((acc, transaction) => {
+    const key = normalizeTransactionDateValue(transaction.date);
+    if (!key) return acc;
+
+    if (!acc[key]) {
+      acc[key] = { income: 0, expense: 0, count: 0 };
+    }
+
+    if (transaction.type === "income") {
+      acc[key].income += Number(transaction.amount);
+    } else {
+      acc[key].expense += Number(transaction.amount);
+    }
+
+    acc[key].count += 1;
+    return acc;
+  }, {});
 }
 
 function renderMonthCalendar() {
@@ -519,6 +984,7 @@ function renderMonthCalendar() {
   const startOffset = (firstDay.getDay() + 6) % 7;
   const prevMonthDays = getDaysInMonth(selectedYear, selectedMonth - 1);
   const today = new Date();
+  const calendarTotalsMap = buildCalendarTotalsMap();
 
   const cells = [];
 
@@ -554,7 +1020,7 @@ function renderMonthCalendar() {
 
   grid.innerHTML = cells.map(cell => {
     const isoDate = toInputDate(new Date(cell.year, cell.month, cell.day));
-    const totals = getCalendarDayTotals(isoDate);
+    const totals = calendarTotalsMap[isoDate] || { income: 0, expense: 0, count: 0 };
     const hasIncome = totals.income > 0;
     const hasExpense = totals.expense > 0;
     const isToday =
@@ -615,13 +1081,16 @@ function updateThemeToggleButton() {
 function renderKpis() {
   const current = getSelectedMonthTotals();
   const previous = getPreviousMonthTotals();
+  const currentInvestmentWithTithe = Number(current.investment || 0) + Number(current.tithe || 0);
+  const previousInvestmentWithTithe = Number(previous.investment || 0) + Number(previous.tithe || 0);
 
   document.getElementById("incomeKpi").textContent = formatCurrency(current.income);
-  document.getElementById("expenseKpi").textContent = formatCurrency(current.expense);
+  document.getElementById("expenseOnlyKpi").textContent = formatCurrency(current.expense);
+  document.getElementById("investmentOnlyKpi").textContent = formatCurrency(currentInvestmentWithTithe);
   document.getElementById("balanceKpi").textContent = formatCurrency(current.balance);
 
   document.getElementById("incomeCompare").textContent = `Oproti minulému měsíci: ${getComparisonText(current.income, previous.income)}`;
-  document.getElementById("expenseCompare").textContent = `Oproti minulému měsíci: ${getComparisonText(current.expense, previous.expense)}`;
+  document.getElementById("expenseCompare").textContent = `Výdaje ${getComparisonText(current.expense, previous.expense)} · Investice ${getComparisonText(currentInvestmentWithTithe, previousInvestmentWithTithe)}`;
   document.getElementById("balanceCompare").textContent = `Oproti minulému měsíci: ${getComparisonText(current.balance, previous.balance)}`;
 }
 
@@ -765,24 +1234,15 @@ function renderBalanceChart() {
     const d = new Date(selectedYear, selectedMonth - i, 1);
     const year = d.getFullYear();
     const month = d.getMonth();
-    const monthTransactions = getTransactionsForMonth(year, month);
-
-    const income = monthTransactions.filter(t => t.type === "income").reduce((sum, t) => sum + Number(t.amount), 0);
-    const expense = monthTransactions.filter(t => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0);
-    const investment = monthTransactions.filter(t => t.type === "investment").reduce((sum, t) => sum + Number(t.amount), 0);
-    const tithe = monthTransactions.filter(t => t.type === "tithe").reduce((sum, t) => sum + Number(t.amount), 0);
+    const totals = getMonthTotals(year, month);
 
     labels.push(new Intl.DateTimeFormat("cs-CZ", { month: "short" }).format(new Date(year, month, 1)));
-    balances.push(income - expense - investment - tithe);
-    incomes.push(income);
-    expenses.push(expense + investment + tithe);
+    balances.push(totals.balance);
+    incomes.push(totals.income);
+    expenses.push(totals.expense + totals.investment + totals.tithe);
   }
 
-  if (balanceChartInstance) {
-    balanceChartInstance.destroy();
-  }
-
-  balanceChartInstance = new Chart(canvas, {
+  const balanceConfig = {
     type: "line",
     data: {
       labels,
@@ -901,17 +1361,33 @@ function renderBalanceChart() {
         }
       }
     }
-  });
+  };
+
+  if (balanceChartInstance) {
+    balanceChartInstance.data = balanceConfig.data;
+    balanceChartInstance.options = balanceConfig.options;
+    balanceChartInstance.update();
+    return;
+  }
+
+  balanceChartInstance = new Chart(canvas, balanceConfig);
 }
 
 function buildExpenseCategoryData(transactions) {
   const grouped = {};
 
   transactions
-    .filter(t => t.type === "expense")
+    .filter(t => t.type === "expense" || t.type === "investment" || t.type === "tithe")
     .forEach(t => {
       const category = t.category || "Ostatní";
-      grouped[category] = (grouped[category] || 0) + Number(t.amount);
+      const title = (t.title || "").trim();
+      const label = t.type === "investment"
+        ? (title ? `${category} · ${title}` : `${category} · Investice`)
+        : t.type === "tithe"
+          ? (title ? `${category} · ${title}` : `${category} · Desátky`)
+          : category;
+
+      grouped[label] = (grouped[label] || 0) + Number(t.amount);
     });
 
   const labels = Object.keys(grouped);
@@ -952,7 +1428,7 @@ function renderExpenseDonutLegend(labels, values, total) {
   if (!container) return;
 
   if (!labels.length || !values.length || !total) {
-    container.innerHTML = '<div class="expense-legend-empty">Za vybraný měsíc zatím nejsou žádné výdaje podle kategorií.</div>';
+    container.innerHTML = '<div class="expense-legend-empty">Za vybraný měsíc zatím nejsou žádné výdaje, investice ani desátky podle kategorií.</div>';
     return;
   }
 
@@ -1006,9 +1482,15 @@ function renderExpenseHighlights(labels, values, total) {
     .slice(0, 3);
 
   container.innerHTML = items.map((item, index) => `
-    <div class="expense-highlight">
-      <span class="expense-highlight-label">Top ${index + 1}: ${escapeHtml(item.label)}</span>
-      <span class="expense-highlight-value">${formatCurrency(item.value)} · ${item.percent.toFixed(1)} %</span>
+    <div class="expense-highlight expense-highlight-rank-${index + 1}">
+      <div class="expense-highlight-top">
+        <span class="expense-highlight-rank">Top ${index + 1}</span>
+        <span class="expense-highlight-share">${item.percent.toFixed(1)} %</span>
+      </div>
+      <div class="expense-highlight-main">
+        <span class="expense-highlight-label">${escapeHtml(item.label)}</span>
+        <span class="expense-highlight-value">${formatCurrency(item.value)}</span>
+      </div>
     </div>
   `).join("");
 }
@@ -1028,15 +1510,29 @@ function renderExpenseDonutChart() {
 
   const { labels, values, total } = buildExpenseCategoryData(getSelectedMonthTransactions());
   const solidColors = getExpenseDonutSolidColors();
+  const donutOptions = getPremiumDonutOptions(
+    values.length ? formatCurrency(total) : "0 Kč",
+    "Výdaje + investice + desátky",
+    labels.length ? `${labels.length} kategorií` : "Bez dat",
+    false,
+    {
+      totalValue: total,
+      onHoverChange(activeIndex) {
+        setActiveItems("#expenseDonutLegend .expense-legend-item", activeIndex);
+      },
+      hoverValueFormatter(value) {
+        return formatCurrency(value);
+      },
+      hoverSubLabelFormatter(value, index, percent) {
+        return percent ? `${percent} % z výdajů` : "";
+      }
+    }
+  );
 
   renderExpenseDonutLegend(labels, values, total);
   renderExpenseHighlights(labels, values, total);
 
-  if (expenseDonutChartInstance) {
-    expenseDonutChartInstance.destroy();
-  }
-
-  expenseDonutChartInstance = new Chart(canvas, {
+  const expenseChartConfig = {
     type: "doughnut",
     data: {
       labels: labels.length ? labels : ["Žádná data"],
@@ -1057,43 +1553,9 @@ function renderExpenseDonutChart() {
       }]
     },
     options: {
-      ...getPremiumDonutOptions(
-        values.length ? formatCurrency(total) : "0 Kč",
-        "Výdaje",
-        labels.length ? `${labels.length} kategorií` : "Bez dat",
-        false,
-        {
-          totalValue: total,
-          onHoverChange(activeIndex) {
-            setActiveItems("#expenseDonutLegend .expense-legend-item", activeIndex);
-          },
-          hoverValueFormatter(value) {
-            return formatCurrency(value);
-          },
-          hoverSubLabelFormatter(value, index, percent) {
-            return percent ? `${percent} % z výdajů` : "";
-          }
-        }
-      ),
+      ...donutOptions,
       plugins: {
-        ...getPremiumDonutOptions(
-          values.length ? formatCurrency(total) : "0 Kč",
-          "Výdaje",
-          labels.length ? `${labels.length} kategorií` : "Bez dat",
-          false,
-          {
-            totalValue: total,
-            onHoverChange(activeIndex) {
-              setActiveItems("#expenseDonutLegend .expense-legend-item", activeIndex);
-            },
-            hoverValueFormatter(value) {
-              return formatCurrency(value);
-            },
-            hoverSubLabelFormatter(value, index, percent) {
-              return percent ? `${percent} % z výdajů` : "";
-            }
-          }
-        ).plugins,
+        ...donutOptions.plugins,
         tooltip: {
           enabled: false,
           backgroundColor: "rgba(9, 14, 22, 0.97)",
@@ -1116,7 +1578,16 @@ function renderExpenseDonutChart() {
       }
     },
     plugins: [centerTextPlugin, premiumGlowPlugin]
-  });
+  };
+
+  if (expenseDonutChartInstance) {
+    expenseDonutChartInstance.data = expenseChartConfig.data;
+    expenseDonutChartInstance.options = expenseChartConfig.options;
+    expenseDonutChartInstance.update();
+    return;
+  }
+
+  expenseDonutChartInstance = new Chart(canvas, expenseChartConfig);
 }
 function categorizeForRule(transaction) {
   const category = normalizeText(transaction.category);
@@ -1134,16 +1605,12 @@ function categorizeForRule(transaction) {
     return "savings";
   }
 
-  if (
-    category.includes("zábav") ||
-    category.includes("zabav") ||
-    category.includes("restaur") ||
-    category.includes("cest") ||
-    category.includes("hobby") ||
-    category.includes("volný") ||
-    category.includes("volny")
-  ) {
+  if (categoryMatchesRuleBucket(category, RULE_CATEGORY_BUCKETS.fun)) {
     return "fun";
+  }
+
+  if (categoryMatchesRuleBucket(category, RULE_CATEGORY_BUCKETS.needs)) {
+    return "needs";
   }
 
   return "needs";
@@ -1234,15 +1701,11 @@ function renderRatioRule() {
   const canvas = document.getElementById("ratioRuleChart");
   if (!canvas || typeof Chart === "undefined") return;
 
-  if (ratioRuleChartInstance) {
-    ratioRuleChartInstance.destroy();
-  }
-
   const values = income
     ? [targetNeeds, targetFun, targetSavings, targetTithe]
     : [48, 26, 16, 10];
 
-  ratioRuleChartInstance = new Chart(canvas, {
+  const ratioChartConfig = {
     type: "doughnut",
     data: {
       labels: [
@@ -1336,7 +1799,16 @@ function renderRatioRule() {
       }
     },
     plugins: [centerTextPlugin, premiumGlowPlugin]
-  });
+  };
+
+  if (ratioRuleChartInstance) {
+    ratioRuleChartInstance.data = ratioChartConfig.data;
+    ratioRuleChartInstance.options = ratioChartConfig.options;
+    ratioRuleChartInstance.update();
+    return;
+  }
+
+  ratioRuleChartInstance = new Chart(canvas, ratioChartConfig);
 }
 
 function renderBudgets() {
@@ -1375,11 +1847,11 @@ function renderBudgets() {
         <div class="budget-item-top">
           <div class="budget-item-head">
             <span class="budget-dot"></span>
-            <strong class="budget-category">${category}</strong>
+            <strong class="budget-category">${escapeHtml(category)}</strong>
           </div>
           <div class="budget-item-actions">
-            <button class="budget-action-btn" type="button" onclick="editBudget('${escapeHtml(category)}')" title="Upravit limit">✎</button>
-            <button class="budget-action-btn budget-action-delete" type="button" onclick="deleteBudget('${escapeHtml(category)}')" title="Smazat limit">🗑️</button>
+            <button class="budget-action-btn" type="button" data-budget-action="edit" data-category="${escapeHtml(category)}" title="Upravit limit">✎</button>
+            <button class="budget-action-btn budget-action-delete" type="button" data-budget-action="delete" data-category="${escapeHtml(category)}" title="Smazat limit">🗑️</button>
           </div>
         </div>
         <div class="budget-item-top">
@@ -1479,7 +1951,8 @@ function renderGoals() {
 }
 
 function getRecurringNextDate(plan, year, month) {
-  const day = Math.min(Number(plan.dayOfMonth || 1), getDaysInMonth(year, month));
+  const safeDay = Math.max(Number(plan.dayOfMonth || 1), 1);
+  const day = Math.min(safeDay, getDaysInMonth(year, month));
   return new Date(year, month, day);
 }
 
@@ -1488,6 +1961,9 @@ function renderRecurringPlans() {
   if (!list) return;
 
   const plans = getRecurringPlans();
+  const snapshotById = new Map(
+    getRecurringSnapshotForSelectedMonth().entries.map(entry => [entry.id, entry])
+  );
   if (!plans.length) {
     list.innerHTML = `
       <div class="empty-state">
@@ -1503,7 +1979,9 @@ function renderRecurringPlans() {
   }
 
   list.innerHTML = plans.map(plan => {
+    const snapshot = snapshotById.get(plan.id);
     const nextDate = getRecurringNextDate(plan, selectedYear, selectedMonth);
+    const isApplied = Boolean(snapshot?.isApplied);
     return `
       <div class="recurring-item">
         <div class="recurring-item-compact">
@@ -1523,7 +2001,7 @@ function renderRecurringPlans() {
           <div class="recurring-item-side">
             <span class="type-badge type-${plan.type}">${getTypeLabel(plan.type)}</span>
             <div class="recurring-actions recurring-actions-compact">
-              <button class="btn btn-ghost btn-small" type="button" onclick="applyRecurringPlan('${plan.id}')">Přidat</button>
+              <button class="btn btn-ghost btn-small" type="button" onclick="applyRecurringPlan('${plan.id}')" ${isApplied ? "disabled" : ""}>${isApplied ? "Přidáno" : "Přidat"}</button>
               <button class="budget-action-btn" type="button" onclick="editRecurringPlan('${plan.id}')" title="Upravit platbu">✎</button>
               <button class="budget-action-btn budget-action-delete" type="button" onclick="deleteRecurringPlan('${plan.id}')" title="Smazat platbu">🗑️</button>
             </div>
@@ -1585,16 +2063,188 @@ function renderSmartInsights() {
   `;
 }
 
+function getBudgetSnapshotForSelectedMonth() {
+  const transactions = getSelectedMonthTransactions().filter(t => t.type === "expense");
+  const entries = Object.entries(getBudgets()).map(([category, limit]) => {
+    const safeLimit = Number(limit || 0);
+    const spent = transactions
+      .filter(t => normalizeText(t.category) === normalizeText(category))
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const percent = safeLimit > 0 ? (spent / safeLimit) * 100 : 0;
+
+    return {
+      category,
+      limit: safeLimit,
+      spent,
+      remaining: safeLimit - spent,
+      percent
+    };
+  });
+
+  return {
+    entries: entries.sort((a, b) => b.percent - a.percent || b.spent - a.spent),
+    totalLimit: entries.reduce((sum, item) => sum + item.limit, 0),
+    totalSpent: entries.reduce((sum, item) => sum + item.spent, 0)
+  };
+}
+
+function doesTransactionMatchRecurringPlan(transaction, plan, scheduledDate) {
+  return (
+    normalizeText(transaction.title) === normalizeText(plan.title) &&
+    Number(transaction.amount) === Number(plan.amount) &&
+    normalizeText(transaction.category) === normalizeText(plan.category) &&
+    transaction.type === plan.type &&
+    normalizeTransactionDateValue(transaction.date) === normalizeTransactionDateValue(scheduledDate)
+  );
+}
+
+function getRecurringSnapshotForSelectedMonth() {
+  const monthTransactions = getSelectedMonthTransactions();
+  const today = getTodayInputValue();
+  const isCurrentPeriod = selectedYear === new Date().getFullYear() && selectedMonth === new Date().getMonth();
+
+  const entries = getRecurringPlans().map(plan => {
+    const scheduledDate = normalizeTransactionDateValue(toInputDate(getRecurringNextDate(plan, selectedYear, selectedMonth)));
+    const matchedTransaction = monthTransactions.find(transaction =>
+      doesTransactionMatchRecurringPlan(transaction, plan, scheduledDate)
+    );
+    const amount = Number(plan.amount || 0);
+    const isIncome = plan.type === "income";
+    const isApplied = Boolean(matchedTransaction) || normalizeTransactionDateValue(plan.lastUsedAt) === scheduledDate;
+    const isPastDue = !isApplied && isCurrentPeriod && scheduledDate < today;
+
+    return {
+      ...plan,
+      amount,
+      scheduledDate,
+      isApplied,
+      isPastDue,
+      direction: isIncome ? "income" : "outflow"
+    };
+  }).sort((a, b) => parseTransactionDate(a.scheduledDate) - parseTransactionDate(b.scheduledDate));
+
+  const plannedIncome = entries.filter(item => item.direction === "income").reduce((sum, item) => sum + item.amount, 0);
+  const plannedOutflow = entries.filter(item => item.direction === "outflow").reduce((sum, item) => sum + item.amount, 0);
+  const pendingIncome = entries.filter(item => item.direction === "income" && !item.isApplied).reduce((sum, item) => sum + item.amount, 0);
+  const pendingOutflow = entries.filter(item => item.direction === "outflow" && !item.isApplied).reduce((sum, item) => sum + item.amount, 0);
+
+  return {
+    entries,
+    plannedIncome,
+    plannedOutflow,
+    pendingIncome,
+    pendingOutflow,
+    pendingCount: entries.filter(item => !item.isApplied).length
+  };
+}
+
+function renderMonthlyPlanner() {
+  const kpis = document.getElementById("plannerKpis");
+  const budgetRows = document.getElementById("plannerBudgetRows");
+  const recurringRows = document.getElementById("plannerRecurringRows");
+  const budgetMeta = document.getElementById("plannerBudgetMeta");
+  const recurringMeta = document.getElementById("plannerRecurringMeta");
+  if (!kpis || !budgetRows || !recurringRows || !budgetMeta || !recurringMeta) return;
+
+  const totals = getSelectedMonthTotals();
+  const budgetSnapshot = getBudgetSnapshotForSelectedMonth();
+  const recurringSnapshot = getRecurringSnapshotForSelectedMonth();
+
+  const budgetUsagePercent = budgetSnapshot.totalLimit > 0
+    ? (budgetSnapshot.totalSpent / budgetSnapshot.totalLimit) * 100
+    : 0;
+  const currentBalance = totals.balance;
+  const projectedBalance = currentBalance + recurringSnapshot.pendingIncome - recurringSnapshot.pendingOutflow;
+
+  kpis.innerHTML = `
+    <article class="planner-kpi-card">
+      <span class="planner-kpi-label">Rozpočty</span>
+      <strong class="planner-kpi-value">${formatCurrency(budgetSnapshot.totalSpent)}</strong>
+      <small class="planner-kpi-meta">z ${formatCurrency(budgetSnapshot.totalLimit)} · ${budgetUsagePercent.toFixed(1)} % plánu</small>
+    </article>
+    <article class="planner-kpi-card">
+      <span class="planner-kpi-label">Opakované odchozí</span>
+      <strong class="planner-kpi-value">${formatCurrency(recurringSnapshot.plannedOutflow - recurringSnapshot.pendingOutflow)}</strong>
+      <small class="planner-kpi-meta">splněno z ${formatCurrency(recurringSnapshot.plannedOutflow)}</small>
+    </article>
+    <article class="planner-kpi-card">
+      <span class="planner-kpi-label">Ještě čeká</span>
+      <strong class="planner-kpi-value">${formatCurrency(recurringSnapshot.pendingOutflow)}</strong>
+      <small class="planner-kpi-meta">${recurringSnapshot.pendingCount} naplánovaných pohybů bez zaúčtování</small>
+    </article>
+    <article class="planner-kpi-card">
+      <span class="planner-kpi-label">Odhad zůstatku</span>
+      <strong class="planner-kpi-value">${formatCurrency(projectedBalance)}</strong>
+      <small class="planner-kpi-meta">aktuálně ${formatCurrency(currentBalance)} · po zbytku plánu</small>
+    </article>
+  `;
+
+  budgetMeta.textContent = budgetSnapshot.entries.length
+    ? `${budgetSnapshot.entries.length} limitů v tomto měsíci`
+    : "Bez nastavených limitů";
+
+  if (!budgetSnapshot.entries.length) {
+    budgetRows.innerHTML = '<div class="planner-empty">Zatím nemáš nastavené žádné rozpočty kategorií.</div>';
+  } else {
+    budgetRows.innerHTML = budgetSnapshot.entries.slice(0, 6).map(item => {
+      const fillWidth = Math.min(item.percent, 100);
+      const statusClass = item.percent >= 100 ? "is-danger" : item.percent >= 80 ? "is-warning" : "is-good";
+      const remainingText = item.remaining >= 0
+        ? `Zbývá ${formatCurrency(item.remaining)}`
+        : `Přes limit o ${formatCurrency(Math.abs(item.remaining))}`;
+
+      return `
+        <div class="planner-budget-row ${statusClass}">
+          <div class="planner-row-top">
+            <strong>${escapeHtml(item.category)}</strong>
+            <span>${item.percent.toFixed(1)} %</span>
+          </div>
+          <div class="planner-row-progress">
+            <div class="planner-row-fill" style="width:${Math.max(fillWidth, 4)}%"></div>
+          </div>
+          <div class="planner-row-meta">
+            <span>${formatCurrency(item.spent)} z ${formatCurrency(item.limit)}</span>
+            <span>${remainingText}</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  recurringMeta.textContent = recurringSnapshot.entries.length
+    ? `${recurringSnapshot.entries.length} plánovaných pohybů`
+    : "Bez opakovaných plateb";
+
+  if (!recurringSnapshot.entries.length) {
+    recurringRows.innerHTML = '<div class="planner-empty">Zatím nemáš uložené žádné opakované platby ani příjmy.</div>';
+  } else {
+    recurringRows.innerHTML = recurringSnapshot.entries.map(item => `
+      <div class="planner-recurring-row ${item.isApplied ? "is-applied" : item.isPastDue ? "is-past-due" : "is-pending"}">
+        <div class="planner-row-top">
+          <div class="planner-recurring-title-wrap">
+            <strong>${escapeHtml(item.title)}</strong>
+            <span>${escapeHtml(item.category || "Bez kategorie")} · ${formatDate(item.scheduledDate)}</span>
+          </div>
+          <span class="planner-recurring-amount">${item.direction === "income" ? "+" : "-"} ${formatCurrency(item.amount)}</span>
+        </div>
+        <div class="planner-row-meta">
+          <span>${getTypeLabel(item.type)}</span>
+          <span class="planner-status-pill">${item.isApplied ? "Zaúčtováno" : item.isPastDue ? "Po termínu" : "Čeká"}</span>
+        </div>
+      </div>
+    `).join("");
+  }
+}
+
 function renderTransactionSummary() {
   const transactions = getSelectedMonthTransactions();
-
-  const totalExpense = transactions.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
-  const totalIncome = transactions.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
-  const totalOther = transactions.filter(t => t.type === "investment" || t.type === "tithe").reduce((s, t) => s + Number(t.amount), 0);
+  const totals = getSelectedMonthTotals();
+  const totalOther = totals.investment + totals.tithe;
+  const expenseWithInvestments = getExpenseWithInvestmentsTotal(totals);
 
   document.getElementById("transactionsCount").textContent = transactions.length;
-  document.getElementById("transactionsExpenseTotal").textContent = formatCurrency(totalExpense);
-  document.getElementById("transactionsIncomeTotal").textContent = formatCurrency(totalIncome);
+  document.getElementById("transactionsExpenseTotal").textContent = formatCurrency(expenseWithInvestments);
+  document.getElementById("transactionsIncomeTotal").textContent = formatCurrency(totals.income);
   document.getElementById("transactionsOtherTotal").textContent = formatCurrency(totalOther);
 }
 
@@ -1644,9 +2294,9 @@ function getFilteredTransactions() {
   transactions.sort((a, b) => {
     switch (sort) {
       case "date-asc":
-        return new Date(a.date) - new Date(b.date);
+        return parseTransactionDate(a.date) - parseTransactionDate(b.date);
       case "date-desc":
-        return new Date(b.date) - new Date(a.date);
+        return parseTransactionDate(b.date) - parseTransactionDate(a.date);
       case "amount-asc":
         return Number(a.amount) - Number(b.amount);
       case "amount-desc":
@@ -1656,7 +2306,7 @@ function getFilteredTransactions() {
       case "title-desc":
         return b.title.localeCompare(a.title, "cs");
       default:
-        return new Date(b.date) - new Date(a.date);
+        return parseTransactionDate(b.date) - parseTransactionDate(a.date);
     }
   });
 
@@ -1742,7 +2392,7 @@ function renderTransactions() {
   });
 }
 
-function addTransaction(event) {
+async function addTransaction(event) {
   event.preventDefault();
 
   const title = document.getElementById("transactionTitle").value.trim();
@@ -1762,26 +2412,28 @@ function addTransaction(event) {
     return;
   }
 
-  const allTransactions = getAllTransactions();
-  const newTransaction = {
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    userId: currentUser.id,
-    title,
-    amount,
-    type: normalizeTransactionType(type, category),
-    category,
-    date,
-    note,
-    createdAt: new Date().toISOString()
-  };
+  try {
+    const newTransaction = await apiRequest("/api/transactions", {
+      method: "POST",
+      body: {
+        title,
+        amount,
+        type: normalizeTransactionType(type, category),
+        category,
+        date: normalizeTransactionDateValue(date),
+        note
+      }
+    });
 
-  allTransactions.push(newTransaction);
-  saveAllTransactions(allTransactions);
-
-  transactionsData = getUserTransactions(currentUser.id);
+    transactionsData = [...transactionsData, normalizeTransactionRecord(newTransaction)];
+    invalidateSelectedMonthCache();
+  } catch (error) {
+    showToast(error.message || "Transakci se nepodařilo uložit.");
+    return;
+  }
 
   document.getElementById("quickTransactionForm").reset();
-  document.getElementById("transactionDate").value = new Date().toISOString().split("T")[0];
+  document.getElementById("transactionDate").value = getTodayInputValue();
   document.getElementById("transactionType").value = "expense";
   renderQuickCategoryOptions("expense");
   syncQuickCategoryChips();
@@ -1794,14 +2446,21 @@ function addTransaction(event) {
   renderAll();
 }
 
-function deleteTransaction(id) {
+async function deleteTransaction(id) {
   const confirmed = confirm("Opravdu chceš smazat tuto transakci?");
   if (!confirmed) return;
 
-  const allTransactions = getAllTransactions().filter(t => t.id !== id);
-  saveAllTransactions(allTransactions);
+  try {
+    await apiRequest(`/api/transactions/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+    transactionsData = transactionsData.filter(t => t.id !== id);
+    invalidateSelectedMonthCache();
+  } catch (error) {
+    showToast(error.message || "Transakci se nepodařilo smazat.");
+    return;
+  }
 
-  transactionsData = getUserTransactions(currentUser.id);
   showToast("Transakce byla smazána.");
   renderAll();
 }
@@ -1814,11 +2473,22 @@ function editTransaction(id) {
   document.getElementById("editTransactionAmount").value = String(transaction.amount || "");
   document.getElementById("editTransactionType").value = transaction.type || "expense";
   document.getElementById("editTransactionCategory").value = transaction.category || "";
-  document.getElementById("editTransactionDate").value = transaction.date || "";
+  document.getElementById("editTransactionDate").value = normalizeTransactionDateValue(transaction.date);
   document.getElementById("editTransactionNote").value = transaction.note || "";
   document.getElementById("editTransactionModal")?.classList.remove("hidden");
   document.body.classList.add("modal-open");
   document.getElementById("editTransactionTitleInput")?.focus();
+}
+
+function scheduleRenderTransactions() {
+  if (transactionsFilterTimer) {
+    clearTimeout(transactionsFilterTimer);
+  }
+
+  transactionsFilterTimer = setTimeout(() => {
+    renderTransactions();
+    transactionsFilterTimer = null;
+  }, 120);
 }
 
 window.deleteTransaction = deleteTransaction;
@@ -1860,13 +2530,21 @@ function editBudget(category) {
   document.getElementById("budgetForm")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-function deleteBudget(category) {
+async function deleteBudget(category) {
   const confirmed = confirm(`Opravdu chceš smazat limit pro kategorii ${category}?`);
   if (!confirmed) return;
 
-  const budgets = getBudgets();
-  delete budgets[category];
-  saveBudgets(budgets);
+  try {
+    await apiRequest(`/api/budgets/${encodeURIComponent(category)}`, {
+      method: "DELETE"
+    });
+    const budgets = { ...getBudgets() };
+    delete budgets[category];
+    saveBudgets(budgets);
+  } catch (error) {
+    showToast(error.message || "Rozpočet se nepodařilo smazat.");
+    return;
+  }
 
   if (document.getElementById("budgetOriginalCategory").value === category) {
     document.getElementById("budgetForm").reset();
@@ -1879,7 +2557,7 @@ function deleteBudget(category) {
   renderSmartInsights();
 }
 
-function saveBudget(event) {
+async function saveBudget(event) {
   event.preventDefault();
 
   const category = document.getElementById("budgetCategory").value;
@@ -1891,12 +2569,30 @@ function saveBudget(event) {
     return;
   }
 
-  const budgets = getBudgets();
-  if (originalCategory && originalCategory !== category) {
-    delete budgets[originalCategory];
+  try {
+    if (originalCategory && originalCategory !== category) {
+      await apiRequest(`/api/budgets/${encodeURIComponent(originalCategory)}`, {
+        method: "DELETE"
+      });
+    }
+
+    const savedBudget = await apiRequest(`/api/budgets/${encodeURIComponent(category)}`, {
+      method: "PUT",
+      body: {
+        limitAmount: limit
+      }
+    });
+
+    const budgets = { ...getBudgets() };
+    if (originalCategory && originalCategory !== category) {
+      delete budgets[originalCategory];
+    }
+    budgets[savedBudget.category] = Number(savedBudget.limitAmount || limit);
+    saveBudgets(budgets);
+  } catch (error) {
+    showToast(error.message || "Rozpočet se nepodařilo uložit.");
+    return;
   }
-  budgets[category] = limit;
-  saveBudgets(budgets);
 
   document.getElementById("budgetForm").reset();
   document.getElementById("budgetOriginalCategory").value = "";
@@ -1912,7 +2608,7 @@ function resetGoalForm() {
   document.getElementById("goalSubmitBtn").textContent = "Uložit cíl";
 }
 
-function saveGoal(event) {
+async function saveGoal(event) {
   event.preventDefault();
 
   const id = document.getElementById("goalId").value;
@@ -1926,21 +2622,34 @@ function saveGoal(event) {
     return;
   }
 
-  const goals = getGoals();
   const payload = {
-    id: id || (crypto.randomUUID ? crypto.randomUUID() : `goal-${Date.now()}`),
     name,
     target,
     current,
-    monthlyContribution,
-    createdAt: new Date().toISOString()
+    monthlyContribution
   };
 
-  const nextGoals = id
-    ? goals.map(goal => goal.id === id ? { ...goal, ...payload, createdAt: goal.createdAt || payload.createdAt } : goal)
-    : [...goals, payload];
+  try {
+    const savedGoal = id
+      ? await apiRequest(`/api/goals/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: payload
+      })
+      : await apiRequest("/api/goals", {
+        method: "POST",
+        body: payload
+      });
 
-  saveGoals(nextGoals);
+    const nextGoals = id
+      ? getGoals().map(goal => goal.id === id ? savedGoal : goal)
+      : [...getGoals(), savedGoal];
+
+    saveGoals(nextGoals);
+  } catch (error) {
+    showToast(error.message || "Cíl se nepodařilo uložit.");
+    return;
+  }
+
   resetGoalForm();
   showToast(id ? "Cíl byl upraven." : "Cíl byl uložen.");
   renderGoals();
@@ -1960,11 +2669,20 @@ function editGoal(id) {
   focusGoalForm();
 }
 
-function deleteGoal(id) {
+async function deleteGoal(id) {
   const goal = getGoals().find(item => item.id === id);
   if (!goal || !confirm(`Opravdu chceš smazat cíl ${goal.name}?`)) return;
 
-  saveGoals(getGoals().filter(item => item.id !== id));
+  try {
+    await apiRequest(`/api/goals/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+    saveGoals(getGoals().filter(item => item.id !== id));
+  } catch (error) {
+    showToast(error.message || "Cíl se nepodařilo smazat.");
+    return;
+  }
+
   if (document.getElementById("goalId").value === id) {
     resetGoalForm();
   }
@@ -1979,7 +2697,7 @@ function resetRecurringForm() {
   document.getElementById("recurringSubmitBtn").textContent = "Uložit platbu";
 }
 
-function saveRecurringPlan(event) {
+async function saveRecurringPlan(event) {
   event.preventDefault();
 
   const id = document.getElementById("recurringId").value;
@@ -1994,23 +2712,38 @@ function saveRecurringPlan(event) {
     return;
   }
 
-  const plans = getRecurringPlans();
+  const normalizedDayOfMonth = Math.min(Math.max(Math.trunc(dayOfMonth), 1), 31);
+
   const payload = {
-    id: id || (crypto.randomUUID ? crypto.randomUUID() : `rec-${Date.now()}`),
     title,
     amount,
     type: normalizeTransactionType(type, category),
     category,
-    dayOfMonth,
-    lastUsedAt: plans.find(item => item.id === id)?.lastUsedAt || "",
-    createdAt: new Date().toISOString()
+    dayOfMonth: normalizedDayOfMonth,
+    lastUsedAt: getRecurringPlans().find(item => item.id === id)?.lastUsedAt || null
   };
 
-  const nextPlans = id
-    ? plans.map(plan => plan.id === id ? { ...plan, ...payload, createdAt: plan.createdAt || payload.createdAt } : plan)
-    : [...plans, payload];
+  try {
+    const savedPlan = id
+      ? await apiRequest(`/api/recurring-plans/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: payload
+      })
+      : await apiRequest("/api/recurring-plans", {
+        method: "POST",
+        body: payload
+      });
 
-  saveRecurringPlans(nextPlans);
+    const nextPlans = id
+      ? getRecurringPlans().map(plan => plan.id === id ? normalizeRecurringPlanRecord(savedPlan) : plan)
+      : [...getRecurringPlans(), normalizeRecurringPlanRecord(savedPlan)];
+
+    saveRecurringPlans(nextPlans);
+  } catch (error) {
+    showToast(error.message || "Opakovanou platbu se nepodařilo uložit.");
+    return;
+  }
+
   resetRecurringForm();
   showToast(id ? "Opakovaná platba byla upravena." : "Opakovaná platba byla uložena.");
   renderRecurringPlans();
@@ -2030,11 +2763,20 @@ function editRecurringPlan(id) {
   focusRecurringForm();
 }
 
-function deleteRecurringPlan(id) {
+async function deleteRecurringPlan(id) {
   const plan = getRecurringPlans().find(item => item.id === id);
   if (!plan || !confirm(`Opravdu chceš smazat opakovanou platbu ${plan.title}?`)) return;
 
-  saveRecurringPlans(getRecurringPlans().filter(item => item.id !== id));
+  try {
+    await apiRequest(`/api/recurring-plans/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+    saveRecurringPlans(getRecurringPlans().filter(item => item.id !== id));
+  } catch (error) {
+    showToast(error.message || "Opakovanou platbu se nepodařilo smazat.");
+    return;
+  }
+
   if (document.getElementById("recurringId").value === id) {
     resetRecurringForm();
   }
@@ -2042,33 +2784,56 @@ function deleteRecurringPlan(id) {
   renderRecurringPlans();
 }
 
-function applyRecurringPlan(id) {
+async function applyRecurringPlan(id) {
   const plan = getRecurringPlans().find(item => item.id === id);
   if (!plan || !currentUser) return;
 
   const date = toInputDate(getRecurringNextDate(plan, selectedYear, selectedMonth));
-  const allTransactions = getAllTransactions();
-  allTransactions.push({
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    userId: currentUser.id,
-    title: plan.title,
-    amount: Number(plan.amount),
-    type: normalizeTransactionType(plan.type, plan.category),
-    category: plan.category,
-    date,
-    note: "Vytvořeno z opakované platby",
-    createdAt: new Date().toISOString()
-  });
+  const duplicateTransaction = getAllTransactions()
+    .some(transaction => doesTransactionMatchRecurringPlan(transaction, plan, date));
 
-  saveAllTransactions(allTransactions);
+  if (duplicateTransaction) {
+    showToast("Tahle opakovaná platba už je v tomto měsíci zaúčtovaná.");
+    return;
+  }
 
-  saveRecurringPlans(getRecurringPlans().map(item => (
-    item.id === id
-      ? { ...item, lastUsedAt: date }
-      : item
-  )));
+  try {
+    const createdTransaction = await apiRequest("/api/transactions", {
+      method: "POST",
+      body: {
+        title: plan.title,
+        amount: Number(plan.amount),
+        type: normalizeTransactionType(plan.type, plan.category),
+        category: plan.category,
+        date,
+        note: "Vytvořeno z opakované platby"
+      }
+    });
 
-  transactionsData = getUserTransactions(currentUser.id);
+    const updatedPlan = await apiRequest(`/api/recurring-plans/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: {
+        title: plan.title,
+        amount: Number(plan.amount),
+        type: normalizeTransactionType(plan.type, plan.category),
+        category: plan.category,
+        dayOfMonth: Number(plan.dayOfMonth),
+        lastUsedAt: date
+      }
+    });
+
+    transactionsData = [...transactionsData, normalizeTransactionRecord(createdTransaction)];
+    saveRecurringPlans(getRecurringPlans().map(item => (
+      item.id === id
+        ? normalizeRecurringPlanRecord(updatedPlan)
+        : item
+    )));
+    invalidateSelectedMonthCache();
+  } catch (error) {
+    showToast(error.message || "Opakovanou platbu se nepodařilo přidat.");
+    return;
+  }
+
   showToast("Opakovaná platba byla přidána do transakcí.");
   renderAll();
 }
@@ -2080,7 +2845,50 @@ function closeEditTransactionModal() {
   document.getElementById("editTransactionId").value = "";
 }
 
-function saveEditedTransaction(event) {
+function openChangePasswordModal() {
+  document.getElementById("changePasswordModal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  document.getElementById("changePasswordForm")?.reset();
+  document.getElementById("currentPasswordInput")?.focus();
+}
+
+function closeChangePasswordModal() {
+  document.getElementById("changePasswordModal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  document.getElementById("changePasswordForm")?.reset();
+}
+
+async function saveChangedPassword(event) {
+  event.preventDefault();
+
+  const currentPassword = document.getElementById("currentPasswordInput")?.value || "";
+  const newPassword = document.getElementById("newPasswordInput")?.value || "";
+  const confirmPassword = document.getElementById("confirmPasswordInput")?.value || "";
+
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    showToast("Vyplň všechna pole pro změnu hesla.");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    showToast("Nová hesla se musí shodovat.");
+    return;
+  }
+
+  try {
+    await window.MonetraApi.changePassword({
+      currentPassword,
+      newPassword,
+      confirmPassword
+    });
+    closeChangePasswordModal();
+    showToast("Heslo bylo změněno.");
+  } catch (error) {
+    showToast(error.message || "Heslo se nepodařilo změnit.");
+  }
+}
+
+async function saveEditedTransaction(event) {
   event.preventDefault();
 
   const id = document.getElementById("editTransactionId").value;
@@ -2096,22 +2904,28 @@ function saveEditedTransaction(event) {
     return;
   }
 
-  const allTransactions = getAllTransactions();
-  const index = allTransactions.findIndex(t => t.id === id);
-  if (index === -1) return;
+  try {
+    const updated = await apiRequest(`/api/transactions/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: {
+        title,
+        amount,
+        type: normalizeTransactionType(type, category),
+        category,
+        date: normalizeTransactionDateValue(date),
+        note
+      }
+    });
 
-  allTransactions[index] = {
-    ...allTransactions[index],
-    title,
-    amount,
-    type: normalizeTransactionType(type, category),
-    category,
-    date,
-    note
-  };
+    transactionsData = transactionsData.map(transaction => (
+      transaction.id === id ? normalizeTransactionRecord(updated) : transaction
+    ));
+    invalidateSelectedMonthCache();
+  } catch (error) {
+    showToast(error.message || "Transakci se nepodařilo upravit.");
+    return;
+  }
 
-  saveAllTransactions(allTransactions);
-  transactionsData = getUserTransactions(currentUser.id);
   closeEditTransactionModal();
   showToast("Transakce byla upravena.");
   renderAll();
@@ -2128,6 +2942,10 @@ window.deleteGoal = deleteGoal;
 window.editRecurringPlan = editRecurringPlan;
 window.deleteRecurringPlan = deleteRecurringPlan;
 window.applyRecurringPlan = applyRecurringPlan;
+window.deleteAdminUser = deleteAdminUser;
+window.openEditAdminUserModal = openEditAdminUserModal;
+window.resetAdminUserPassword = resetAdminUserPassword;
+window.toggleAdminUserActive = toggleAdminUserActive;
 window.resetTransactionFilters = () => {
   document.getElementById("transactionSearch").value = "";
   document.getElementById("transactionFilterType").value = "all";
@@ -2174,11 +2992,7 @@ function buildPdfRuleLegendRows(incomeTotal) {
 }
 
 function getYearMonthTotals(year, month) {
-  const transactions = getTransactionsForMonth(year, month);
-  const income = transactions.filter(t => t.type === "income").reduce((sum, t) => sum + Number(t.amount), 0);
-  const expense = transactions.filter(t => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0);
-  const investment = transactions.filter(t => t.type === "investment").reduce((sum, t) => sum + Number(t.amount), 0);
-  const tithe = transactions.filter(t => t.type === "tithe").reduce((sum, t) => sum + Number(t.amount), 0);
+  const { income, expense, investment, tithe } = getMonthTotals(year, month);
 
   return {
     income,
@@ -3060,7 +3874,7 @@ function toggleTheme() {
 }
 
 function logout() {
-  localStorage.removeItem(SESSION_KEY);
+  window.MonetraApi?.clearSession();
   window.location.href = "index.html";
 }
 
@@ -3070,7 +3884,9 @@ function renderAll() {
   renderBudgetCategoryOptions();
   renderRecurringCategoryOptions();
   renderTransactionCategoryDatalist();
+  renderAdminPanel();
   updateThemeToggleButton();
+  renderMonthlyPlanner();
   renderKpis();
   renderExpenseDonutChart();
   renderRatioRule();
@@ -3084,15 +3900,251 @@ function renderAll() {
   renderTransactions();
 }
 
+function renderAdminPanel() {
+  const panel = document.getElementById("adminPanel");
+  const list = document.getElementById("adminUsersList");
+  const count = document.getElementById("adminUsersCount");
+  if (!panel || !list || !count) return;
+
+  if (!isAdminUser()) {
+    panel.classList.add("hidden");
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  count.textContent = String(adminUsersCache.length);
+
+  if (!adminUsersCache.length) {
+    list.innerHTML = '<div class="admin-empty">Zatím tu nejsou žádní uživatelé.</div>';
+    return;
+  }
+
+  list.innerHTML = adminUsersCache.map(user => `
+    <div class="admin-user-item">
+      <div class="admin-user-main">
+        <div class="admin-user-name-row">
+          <strong>${escapeHtml(user.name || user.email)}</strong>
+          <span class="admin-user-role">${escapeHtml(user.role || "USER")}</span>
+          <span class="admin-user-status ${user.active === false ? "is-inactive" : "is-active"}">${user.active === false ? "Neaktivní" : "Aktivní"}</span>
+        </div>
+        <div class="admin-user-email">${escapeHtml(user.email)}</div>
+        <div class="admin-user-meta">
+          Transakce: ${Number(user.stats?.transactions || 0)} · Cíle: ${Number(user.stats?.goals || 0)} · Opakované: ${Number(user.stats?.recurringPlans || 0)}
+        </div>
+      </div>
+      <div class="admin-user-actions">
+        <button class="btn btn-ghost btn-small" type="button" onclick="openEditAdminUserModal('${user.id}')">Upravit</button>
+        <button class="btn btn-ghost btn-small" type="button" onclick="resetAdminUserPassword('${user.id}')">Reset hesla</button>
+        <button class="btn btn-ghost btn-small" type="button" onclick="toggleAdminUserActive('${user.id}')"
+          ${user.id === currentUser?.id ? "disabled" : ""}>
+          ${user.active === false ? "Aktivovat" : "Deaktivovat"}
+        </button>
+        <button class="btn btn-danger btn-small" type="button" onclick="deleteAdminUser('${user.id}')"
+          ${user.id === currentUser?.id ? "disabled" : ""}>
+          Smazat
+        </button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function createAdminUser(event) {
+  event.preventDefault();
+
+  const name = document.getElementById("adminUserName")?.value.trim() || "";
+  const email = document.getElementById("adminUserEmail")?.value.trim() || "";
+  const password = document.getElementById("adminUserPassword")?.value || "";
+  const role = document.getElementById("adminUserRole")?.value || "USER";
+
+  if (!email || !password) {
+    showToast("Vyplň email a heslo pro nového uživatele.");
+    return;
+  }
+
+  try {
+    const newUser = await apiRequest("/api/admin/users", {
+      method: "POST",
+      body: {
+        name,
+        email,
+        password,
+        role
+      }
+    });
+
+    adminUsersCache = [{ ...newUser, stats: { transactions: 0, goals: 0, recurringPlans: 0 } }, ...adminUsersCache];
+    document.getElementById("adminUserForm")?.reset();
+    showToast("Uživatel byl vytvořen.");
+    renderAdminPanel();
+  } catch (error) {
+    showToast(error.message || "Uživatele se nepodařilo vytvořit.");
+  }
+}
+
+function openEditAdminUserModal(id) {
+  const user = adminUsersCache.find(item => item.id === id);
+  if (!user) return;
+
+  editingAdminUserId = id;
+  document.getElementById("editAdminUserId").value = id;
+  document.getElementById("editAdminUserName").value = user.name || "";
+  document.getElementById("editAdminUserEmail").value = user.email || "";
+  document.getElementById("editAdminUserRole").value = user.role || "USER";
+  document.getElementById("editAdminUserActive").value = user.active === false ? "false" : "true";
+  document.getElementById("editAdminUserModal")?.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+  document.getElementById("editAdminUserName")?.focus();
+}
+
+function closeEditAdminUserModal() {
+  editingAdminUserId = "";
+  document.getElementById("editAdminUserModal")?.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+  document.getElementById("editAdminUserForm")?.reset();
+  document.getElementById("editAdminUserId").value = "";
+}
+
+async function saveEditedAdminUser(event) {
+  event.preventDefault();
+
+  const id = document.getElementById("editAdminUserId").value;
+  const email = document.getElementById("editAdminUserEmail").value.trim();
+  const name = document.getElementById("editAdminUserName").value.trim();
+  const role = document.getElementById("editAdminUserRole").value;
+  const active = document.getElementById("editAdminUserActive").value === "true";
+
+  if (!id || !email) {
+    showToast("Vyplň email uživatele.");
+    return;
+  }
+
+  try {
+    const updatedUser = await apiRequest(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: {
+        email,
+        name,
+        role,
+        active
+      }
+    });
+
+    adminUsersCache = adminUsersCache.map(user => (
+      user.id === id ? { ...user, ...updatedUser } : user
+    ));
+    if (currentUser?.id === id) {
+      currentUser = { ...currentUser, ...updatedUser };
+      const session = window.MonetraApi?.getSession();
+      if (session?.token) {
+        window.MonetraApi.setSession({
+          token: session.token,
+          user: currentUser
+        });
+      }
+    }
+    closeEditAdminUserModal();
+    showToast("Uživatel byl upraven.");
+    renderAdminPanel();
+  } catch (error) {
+    showToast(error.message || "Uživatele se nepodařilo upravit.");
+  }
+}
+
+async function resetAdminUserPassword(id) {
+  const user = adminUsersCache.find(item => item.id === id);
+  if (!user) return;
+
+  const newPassword = prompt(`Zadej nové heslo pro ${user.email}:`, "");
+  if (!newPassword) return;
+
+  try {
+    await apiRequest(`/api/admin/users/${encodeURIComponent(id)}/reset-password`, {
+      method: "POST",
+      body: {
+        newPassword
+      }
+    });
+    showToast("Heslo uživatele bylo resetováno.");
+  } catch (error) {
+    showToast(error.message || "Reset hesla se nepodařil.");
+  }
+}
+
+async function toggleAdminUserActive(id) {
+  const user = adminUsersCache.find(item => item.id === id);
+  if (!user) return;
+
+  const nextActive = user.active === false;
+  const actionLabel = nextActive ? "aktivovat" : "deaktivovat";
+
+  if (!confirm(`Opravdu chceš ${actionLabel} účet ${user.email}?`)) {
+    return;
+  }
+
+  try {
+    const updatedUser = await apiRequest(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: {
+        email: user.email,
+        name: user.name || "",
+        role: user.role || "USER",
+        active: nextActive
+      }
+    });
+
+    adminUsersCache = adminUsersCache.map(item => (
+      item.id === id ? { ...item, ...updatedUser } : item
+    ));
+    showToast(`Účet byl ${nextActive ? "aktivován" : "deaktivován"}.`);
+    renderAdminPanel();
+  } catch (error) {
+    showToast(error.message || "Změna stavu účtu se nepodařila.");
+  }
+}
+
+async function deleteAdminUser(id) {
+  const user = adminUsersCache.find(item => item.id === id);
+  if (!user) return;
+
+  if (!confirm(`Opravdu chceš smazat uživatele ${user.email}?`)) {
+    return;
+  }
+
+  try {
+    await apiRequest(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method: "DELETE"
+    });
+    adminUsersCache = adminUsersCache.filter(item => item.id !== id);
+    showToast("Uživatel byl smazán.");
+    renderAdminPanel();
+  } catch (error) {
+    showToast(error.message || "Uživatele se nepodařilo smazat.");
+  }
+}
+
 function seedDateInput() {
   const dateInput = document.getElementById("transactionDate");
   if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().split("T")[0];
+    dateInput.value = getTodayInputValue();
   }
 }
 
 function bindEvents() {
+  document.getElementById("adminUserForm")?.addEventListener("submit", createAdminUser);
+  document.getElementById("editAdminUserForm")?.addEventListener("submit", saveEditedAdminUser);
+  document.getElementById("closeEditAdminUserModal")?.addEventListener("click", closeEditAdminUserModal);
+  document.getElementById("cancelEditAdminUser")?.addEventListener("click", closeEditAdminUserModal);
+  document.querySelectorAll("[data-close-admin-edit-modal='true']").forEach(el => {
+    el.addEventListener("click", closeEditAdminUserModal);
+  });
   document.getElementById("quickTransactionForm")?.addEventListener("submit", addTransaction);
+  document.getElementById("changePasswordBtn")?.addEventListener("click", openChangePasswordModal);
+  document.getElementById("changePasswordForm")?.addEventListener("submit", saveChangedPassword);
+  document.getElementById("closeChangePasswordModal")?.addEventListener("click", closeChangePasswordModal);
+  document.getElementById("cancelChangePassword")?.addEventListener("click", closeChangePasswordModal);
+  document.querySelectorAll("[data-close-password-modal='true']").forEach(el => {
+    el.addEventListener("click", closeChangePasswordModal);
+  });
   document.getElementById("quickTransactionForm")?.addEventListener("reset", () => {
     setTimeout(() => {
       renderQuickCategoryOptions("expense");
@@ -3149,6 +4201,25 @@ function bindEvents() {
   document.getElementById("logoutBtn")?.addEventListener("click", logout);
   document.getElementById("toggleCustomCategoryBtn")?.addEventListener("click", () => toggleCustomCategoryPanel());
   document.getElementById("saveCustomCategoryBtn")?.addEventListener("click", saveCustomCategory);
+  document.getElementById("budgetsList")?.addEventListener("click", event => {
+    if (!(event.target instanceof Element)) return;
+
+    const actionButton = event.target.closest("[data-budget-action]");
+    if (!actionButton) return;
+
+    const category = actionButton.dataset.category || "";
+    if (!category) return;
+
+    if (actionButton.dataset.budgetAction === "edit") {
+      editBudget(category);
+      return;
+    }
+
+    if (actionButton.dataset.budgetAction === "delete") {
+      deleteBudget(category);
+    }
+  });
+
   document.getElementById("customCategoryInput")?.addEventListener("keydown", event => {
     if (event.key !== "Enter") return;
     event.preventDefault();
@@ -3172,7 +4243,7 @@ function bindEvents() {
   filterIds.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener("input", renderTransactions);
+    el.addEventListener("input", scheduleRenderTransactions);
     el.addEventListener("change", renderTransactions);
   });
 
@@ -3193,6 +4264,16 @@ function bindEvents() {
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && !document.getElementById("editTransactionModal")?.classList.contains("hidden")) {
       closeEditTransactionModal();
+      return;
+    }
+
+    if (event.key === "Escape" && !document.getElementById("changePasswordModal")?.classList.contains("hidden")) {
+      closeChangePasswordModal();
+      return;
+    }
+
+    if (event.key === "Escape" && !document.getElementById("editAdminUserModal")?.classList.contains("hidden")) {
+      closeEditAdminUserModal();
       return;
     }
 
@@ -3252,7 +4333,7 @@ function toggleCustomCategoryPanel(forceOpen = null) {
   }
 }
 
-function saveCustomCategory() {
+async function saveCustomCategory() {
   const hiddenTypeInput = document.getElementById("transactionType");
   const input = document.getElementById("customCategoryInput");
   const categorySelect = document.getElementById("transactionCategory");
@@ -3275,9 +4356,16 @@ function saveCustomCategory() {
     return;
   }
 
-  const current = getCustomCategories();
-  current.push({ name, type });
-  saveCustomCategories(current);
+  try {
+    const savedCategory = await apiRequest("/api/custom-categories", {
+      method: "POST",
+      body: { name, type }
+    });
+    saveCustomCategories([...getCustomCategories(), savedCategory]);
+  } catch (error) {
+    showToast(error.message || "Vlastní kategorii se nepodařilo uložit.");
+    return;
+  }
 
   renderQuickCategoryOptions(type);
   renderBudgetCategoryOptions();
@@ -3322,31 +4410,40 @@ function initTheme() {
   applyTheme(savedTheme);
 }
 
-function requireAuth() {
+async function requireAuth() {
   const session = getSession();
 
-  if (!session) {
+  if (!session?.token) {
     window.location.href = "index.html";
     return null;
   }
 
-  const users = JSON.parse(localStorage.getItem(USERS_KEY) || "[]");
-  const validUser = users.find(u => u.id === session.id && u.email === session.email);
-
-  if (!validUser) {
-    localStorage.removeItem(SESSION_KEY);
+  try {
+    const response = await window.MonetraApi.me();
+    window.MonetraApi.setSession({
+      token: session.token,
+      user: response.user
+    });
+    return response.user;
+  } catch {
+    window.MonetraApi?.clearSession();
     window.location.href = "index.html";
     return null;
   }
-
-  return session;
 }
 
-function init() {
-  currentUser = requireAuth();
+async function init() {
+  currentUser = await requireAuth();
   if (!currentUser) return;
 
-  transactionsData = getUserTransactions(currentUser.id);
+  try {
+    await loadBackendState();
+    await migrateLocalData();
+    await loadAdminUsers();
+  } catch (error) {
+    showToast(error.message || "Nepodařilo se načíst data aplikace.");
+    return;
+  }
 
   initTheme();
   seedDateInput();
@@ -3356,6 +4453,8 @@ function init() {
   renderAll();
 }
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  init();
+});
 
 

@@ -3,7 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Trezor výdajů</title>
+  <title>Monetra - Trezor výdajů</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,58 +17,58 @@
   <div class="bg-lines" aria-hidden="true"></div>
 
   <main class="startup-shell">
-    <section class="startup-hero" aria-label="Úvod aplikace">
-      <div class="hero-chip-row">
-        <div class="hero-chip">Modern fintech</div>
-        <div class="hero-status">Bezpečný vstup do tvého přehledu</div>
+    <section class="hero-stage" aria-label="Úvod aplikace">
+      <div class="hero-ambient" aria-hidden="true">
+        <div class="ambient-ring ambient-ring-a"></div>
+        <div class="ambient-ring ambient-ring-b"></div>
+        <div class="ambient-beam"></div>
       </div>
 
-      <div class="hero-core">
-        <p class="hero-kicker">Peníze pod kontrolou</p>
-        <h1 class="hero-title">Jeden přehled pro příjmy, výdaje, cíle i rozpočty.</h1>
-        <p class="hero-copy">
-          Trezor výdajů ti pomůže udržet si klid, přehled a rytmus v osobních financích.
-          Všechno důležité vidíš na jednom místě, bez chaosu a bez zbytečných kroků.
-        </p>
-      </div>
-
-      <div class="hero-visual-grid" aria-hidden="true">
-        <article class="visual-card visual-card-large">
-          <span class="visual-label">Aktuální měsíc</span>
-          <strong>Dashboard, kalendář a rozpočty</strong>
-          <p>Okamžitě vidíš, kde se finance hýbou a co si žádá pozornost.</p>
-        </article>
-        <article class="visual-card visual-card-accent">
-          <span class="visual-label">Pravidelný rytmus</span>
-          <strong>Cíle a opakované platby</strong>
-        </article>
-        <article class="visual-card visual-card-mini">
-          <span class="visual-label">Výstupy</span>
-          <strong>PDF přehledy</strong>
-        </article>
-      </div>
-
-      <div class="hero-benefits">
-        <div class="benefit-pill">
-          <span class="benefit-dot"></span>
-          Rychlé zapisování transakcí
+      <header class="startup-nav startup-nav-centered">
+        <div class="brand-lockup brand-lockup-centered">
+          <span class="brand-mark crest-mark crest-mark-large" aria-hidden="true">
+            <span class="crest-shell">
+              <span class="crest-ring crest-ring-gold"></span>
+              <span class="crest-ring crest-ring-light"></span>
+              <span class="crest-shield crest-shield-outer"></span>
+              <span class="crest-shield crest-shield-inner"></span>
+              <span class="crest-crown"></span>
+              <span class="crest-monogram">M</span>
+              <span class="crest-base"></span>
+            </span>
+          </span>
+          <div class="brand-copy">
+            <p class="brand-overline">Monetra</p>
+            <strong class="brand-name">Trezor výdajů</strong>
+          </div>
         </div>
-        <div class="benefit-pill">
-          <span class="benefit-dot"></span>
-          Přehledné grafy a kalendář
-        </div>
-        <div class="benefit-pill">
-          <span class="benefit-dot"></span>
-          Rozpočty, cíle a limity
-        </div>
+      </header>
+
+      <div class="hero-copy-panel hero-copy-panel-centered" data-reveal="rise">
+        <h1 class="hero-title">Přehled, který drží tvoje výdaje pod kontrolou.</h1>
+        <p class="hero-copy">Jasně. Klidně. V jednom prostoru.</p>
       </div>
 
-      <div class="hero-cta-block">
-        <button class="enter-app-btn" id="openLoginModal" type="button">
-          <span class="enter-app-glow" aria-hidden="true"></span>
-          Vstoupit do aplikace
-        </button>
-        <p class="hero-cta-note">Po kliknutí se otevře přihlášení přímo uprostřed obrazovky.</p>
+      <div class="hero-visual-panel hero-visual-panel-stacked" data-reveal="float">
+        <div class="expense-showcase-card donut-showcase-card">
+          <div class="expense-donut-layout landing-donut-layout landing-donut-layout-wide">
+            <div class="canvas-wrap expense-donut-wrap landing-donut-wrap landing-donut-wrap-large">
+              <canvas id="landingExpenseDonutChart"></canvas>
+            </div>
+            <div class="expense-donut-side">
+              <div class="expense-donut-legend" id="landingExpenseDonutLegend"></div>
+            </div>
+          </div>
+
+          <div class="expense-donut-highlights landing-donut-highlights" id="landingExpenseDonutHighlights"></div>
+        </div>
+
+        <div class="hero-actions hero-actions-centered">
+          <button class="enter-app-btn" id="openLoginModal" type="button">
+            <span class="enter-app-glow" aria-hidden="true"></span>
+            Vstoupit do aplikace
+          </button>
+        </div>
       </div>
     </section>
   </main>
@@ -78,8 +80,18 @@
 
       <div class="auth-card">
         <header class="auth-header">
-          <div class="logo" aria-hidden="true">T</div>
-          <div class="eyebrow">Trezor výdajů</div>
+          <div class="logo crest-mark crest-mark-small" aria-hidden="true">
+            <span class="crest-shell">
+              <span class="crest-ring crest-ring-gold"></span>
+              <span class="crest-ring crest-ring-light"></span>
+              <span class="crest-shield crest-shield-outer"></span>
+              <span class="crest-shield crest-shield-inner"></span>
+              <span class="crest-crown"></span>
+              <span class="crest-monogram">M</span>
+              <span class="crest-base"></span>
+            </span>
+          </div>
+          <div class="eyebrow">Monetra Trezor Výdajů</div>
           <h2 class="title" id="authTitle">Vstup do aplikace</h2>
           <p class="subtitle">Přihlas se nebo si vytvoř účet a pokračuj do svého přehledu financí.</p>
         </header>
@@ -113,7 +125,7 @@
           </button>
 
           <div class="meta">
-            <button type="button" id="registerBtn" class="register-btn">Registrovat</button>
+            <span class="auth-access-note">Účet ti vytvoří administrátor.</span>
             <span class="dot" aria-hidden="true">•</span>
             <button id="forgotBtn" class="link" type="button">Zapomenuté heslo</button>
           </div>
@@ -129,26 +141,8 @@
     </section>
   </div>
 
+  <script src="app-api.js"></script>
   <script>
-    const USERS_KEY = "trezor_vydaju_users";
-    const SESSION_KEY = "trezor_vydaju_session";
-
-    function getUsers() {
-      try {
-        return JSON.parse(localStorage.getItem(USERS_KEY)) || [];
-      } catch {
-        return [];
-      }
-    }
-
-    function saveUsers(users) {
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }
-
-    function setSession(user) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-    }
-
     function showMessage(text, type = "info") {
       const el = document.getElementById("authMessage");
       if (!el) return;
@@ -161,11 +155,16 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
-      const existingSession = localStorage.getItem(SESSION_KEY);
-      if (existingSession) {
-        window.location.href = "dashboard.html";
-        return;
+      const isLowPowerDevice =
+        (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ||
+        (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
+        window.innerWidth < 900;
+
+      if (isLowPowerDevice) {
+        document.body.classList.add("performance-mode");
       }
+
+      const heroStage = document.querySelector(".hero-stage");
 
       const authModal = document.getElementById("authModal");
       const openLoginModal = document.getElementById("openLoginModal");
@@ -173,8 +172,20 @@
       const authForm = document.getElementById("authForm");
       const emailInput = document.getElementById("emailInput");
       const passwordInput = document.getElementById("passwordInput");
-      const registerBtn = document.getElementById("registerBtn");
       const forgotBtn = document.getElementById("forgotBtn");
+      const api = window.MonetraApi;
+
+      const existingSession = api?.getSession();
+      if (existingSession?.token) {
+        api.me()
+          .then(({ user }) => {
+            api.setSession({ token: existingSession.token, user });
+            window.location.href = "dashboard.html";
+          })
+          .catch(() => {
+            api.clearSession();
+          });
+      }
 
       function openModal() {
         document.body.classList.add("modal-open");
@@ -191,6 +202,18 @@
 
       openLoginModal?.addEventListener("click", openModal);
       closeLoginModal?.addEventListener("click", closeModal);
+
+      if (heroStage && !isLowPowerDevice) {
+        window.addEventListener("pointermove", (event) => {
+          const x = event.clientX / window.innerWidth;
+          const y = event.clientY / window.innerHeight;
+          heroStage.style.setProperty("--pointer-x", `${(x * 100).toFixed(2)}%`);
+          heroStage.style.setProperty("--pointer-y", `${(y * 100).toFixed(2)}%`);
+          heroStage.style.setProperty("--tilt-x", `${((x - 0.5) * 10).toFixed(2)}deg`);
+          heroStage.style.setProperty("--tilt-y", `${((0.5 - y) * 10).toFixed(2)}deg`);
+        });
+      }
+
       authModal?.addEventListener("click", (event) => {
         if (event.target instanceof HTMLElement && event.target.dataset.closeAuth === "true") {
           closeModal();
@@ -203,7 +226,7 @@
         }
       });
 
-      authForm?.addEventListener("submit", (event) => {
+      authForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const email = normalizeEmail(emailInput?.value || "");
@@ -214,85 +237,24 @@
           return;
         }
 
-        const users = getUsers();
-        const user = users.find(u => u.email === email && u.password === password);
-
-        if (!user) {
-          showMessage("Neplatný email nebo heslo.", "error");
-          return;
+        try {
+          const response = await api.login({ email, password });
+          api.setSession(response);
+          showMessage("Přihlášení proběhlo úspěšně.", "success");
+          setTimeout(() => {
+            window.location.href = "dashboard.html";
+          }, 500);
+        } catch (error) {
+          showMessage(error.message || "Neplatný email nebo heslo.", "error");
         }
-
-        setSession({
-          id: user.id,
-          email: user.email,
-          name: user.name || ""
-        });
-
-        showMessage("Přihlášení proběhlo úspěšně.", "success");
-
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 500);
-      });
-
-      registerBtn?.addEventListener("click", () => {
-        const email = normalizeEmail(emailInput?.value || "");
-        const password = (passwordInput?.value || "").trim();
-
-        if (!email || !password) {
-          showMessage("Pro registraci nejdřív vyplň email a heslo.", "error");
-          return;
-        }
-
-        if (password.length < 4) {
-          showMessage("Heslo musí mít alespoň 4 znaky.", "error");
-          return;
-        }
-
-        const users = getUsers();
-        const exists = users.some(u => u.email === email);
-
-        if (exists) {
-          showMessage("Tento účet už existuje. Zkus se přihlásit.", "error");
-          return;
-        }
-
-        const newUser = {
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-          email,
-          password,
-          name: email.split("@")[0]
-        };
-
-        users.push(newUser);
-        saveUsers(users);
-        setSession({ id: newUser.id, email: newUser.email, name: newUser.name });
-        showMessage("Účet byl vytvořen. Přesměrovávám do aplikace.", "success");
-
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 600);
       });
 
       forgotBtn?.addEventListener("click", () => {
-        const email = normalizeEmail(emailInput?.value || "");
-        if (!email) {
-          showMessage("Zadej nejdřív svůj email.", "error");
-          return;
-        }
-
-        const users = getUsers();
-        const user = users.find(u => u.email === email);
-
-        if (!user) {
-          showMessage("K tomuto emailu jsme účet nenašli.", "error");
-          return;
-        }
-
-        showMessage(`Nápověda: tvoje heslo je \"${user.password}\"`, "info");
+        showMessage("Obnovu hesla zatím řeší administrátor.", "info");
       });
     });
   </script>
+  <script src="landing-donut.js"></script>
   <script src="money.js"></script>
 </body>
 </html>

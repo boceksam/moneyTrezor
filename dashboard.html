@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trezor výdajů</title>
+  <title>Monetra - Trezor výdajů</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="dashboard.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -17,19 +18,17 @@
       <div class="top-hero-glow top-hero-glow-2"></div>
 
       <div class="top-hero-copy">
-        <p class="eyebrow">Přehled financí</p>
         <div class="top-hero-title-row">
           <h1>Trezor výdajů</h1>
-          <span class="top-hero-badge">Aktivní měsíc</span>
         </div>
       </div>
 
       <div class="top-hero-month-shell">
-        <span class="top-hero-month-label">Aktuálně zvolený měsíc</span>
         <div class="top-hero-month">
           <button id="prevMonthBtn" class="month-nav-btn" type="button">←</button>
           <div class="month-center">
             <h2 id="currentMonthLabel">-</h2>
+            <span class="top-hero-badge">Aktivní měsíc</span>
           </div>
           <button id="openMonthPickerBtn" class="month-nav-btn month-picker-btn" type="button" aria-label="Vybrat měsíc">📅</button>
           <button id="nextMonthBtn" class="month-nav-btn" type="button">→</button>
@@ -39,47 +38,104 @@
       <div class="topbar-actions top-hero-actions">
         <button id="themeToggle" class="btn btn-ghost btn-small theme-toggle-btn" type="button">
           <span id="themeToggleIcon">🌙</span>
-          <span id="themeToggleText">Tmavý režim</span>
+          <span id="themeToggleText">Režim</span>
         </button>
 
-        <button id="exportPdfBtn" class="btn btn-gold btn-small" type="button">Export PDF</button>
+        <button id="changePasswordBtn" class="btn btn-ghost btn-small" type="button">Změnit heslo</button>
+        <button id="exportPdfBtn" class="btn btn-gold btn-small" type="button">PDF</button>
         <button id="annualReportBtn" class="btn btn-ghost btn-small" type="button">Roční přehled</button>
         <button id="logoutBtn" class="btn btn-danger btn-small" type="button">Odhlásit se</button>
       </div>
     </header>
 
     <section class="kpi-grid">
-      <article class="glass-card kpi-card income-kpi">
-        <span>Příjmy</span>
+      <article class="glass-card kpi-card income-kpi kpi-card-narrow">
+        <div class="kpi-card-top">
+          <span class="kpi-label">Příjmy</span>
+        </div>
         <strong id="incomeKpi">0 Kč</strong>
         <small id="incomeCompare">Oproti minulému měsíci: 0 %</small>
       </article>
 
-      <article class="glass-card kpi-card expense-kpi">
-        <span>Výdaje</span>
-        <strong id="expenseKpi">0 Kč</strong>
+      <article class="glass-card kpi-card expense-kpi kpi-card-primary">
+        <div class="kpi-card-top">
+          <span class="kpi-label">Výdaje + investice</span>
+        </div>
+        <div class="kpi-split-values">
+          <div class="kpi-split-item">
+            <span class="kpi-split-label">Výdaje</span>
+            <strong id="expenseOnlyKpi">0 Kč</strong>
+          </div>
+          <div class="kpi-split-item">
+            <span class="kpi-split-label">Investice</span>
+            <strong id="investmentOnlyKpi">0 Kč</strong>
+          </div>
+        </div>
         <small id="expenseCompare">Oproti minulému měsíci: 0 %</small>
       </article>
 
-      <article class="glass-card kpi-card balance-kpi">
-        <span>Zůstatek</span>
+      <article class="glass-card kpi-card balance-kpi kpi-card-narrow">
+        <div class="kpi-card-top">
+          <span class="kpi-label">Zůstatek</span>
+        </div>
         <strong id="balanceKpi">0 Kč</strong>
         <small id="balanceCompare">Oproti minulému měsíci: 0 %</small>
       </article>
     </section>
 
-    <section class="glass-card quick-add-card quick-add-card-v3">
-      <div class="quick-add-topline"></div>
-      <div class="quick-add-float quick-add-float-1"></div>
-      <div class="quick-add-float quick-add-float-2"></div>
-
-      <div class="section-head compact-head quick-add-head-v3">
+    <section id="adminPanel" class="glass-card admin-panel hidden">
+      <div class="section-head compact-head">
         <div>
-          <h2>Rychlé přidání</h2>
-          <p>Vlož transakci rychle, čistě a bez zbytečného přepínání.</p>
+          <h2>Administrace uživatelů</h2>
+          <p>Účty vytváříš ručně, veřejná registrace je vypnutá.</p>
         </div>
-        <div class="quick-add-badge-v3">Rychlý vstup</div>
       </div>
+
+      <div class="admin-panel-grid">
+        <form id="adminUserForm" class="admin-user-form">
+          <div class="form-group">
+            <label for="adminUserName">Jméno</label>
+            <input type="text" id="adminUserName" placeholder="Např. Jan Novák" />
+          </div>
+
+          <div class="form-group">
+            <label for="adminUserEmail">Email</label>
+            <input type="email" id="adminUserEmail" placeholder="uzivatel@firma.cz" />
+          </div>
+
+          <div class="form-group">
+            <label for="adminUserPassword">Dočasné heslo</label>
+            <input type="password" id="adminUserPassword" placeholder="Alespoň 8 znaků" />
+          </div>
+
+          <div class="form-group">
+            <label for="adminUserRole">Role</label>
+            <select id="adminUserRole">
+              <option value="USER">Uživatel</option>
+              <option value="ADMIN">Administrátor</option>
+            </select>
+          </div>
+
+          <button class="btn btn-gold" type="submit">Vytvořit uživatele</button>
+        </form>
+
+        <div class="admin-users-card">
+          <div class="admin-users-head">
+            <strong>Seznam uživatelů</strong>
+            <span id="adminUsersCount">0</span>
+          </div>
+          <div id="adminUsersList" class="admin-users-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass-card quick-add-card quick-add-card-v3">
+        <div class="section-head compact-head quick-add-head-v3">
+          <div>
+            <h2>Nová Transakce</h2>
+            <p>Nejrychlejší místo pro přidání výdaje, příjmu nebo investice.</p>
+          </div>
+        </div>
 
       <form id="quickTransactionForm" class="quick-add-form quick-add-form-v3">
         <div class="quick-type-switch quick-type-switch-v3" id="quickTypeSwitch">
@@ -91,24 +147,14 @@
         <input type="hidden" id="transactionType" value="expense" />
 
         <div class="quick-grid-v3">
-          <div class="form-group quick-category">
-            <label for="transactionCategory">Kategorie</label>
-            <select id="transactionCategory">
-              <option value="">Vyber kategorii</option>
-            </select>
-            <div class="quick-category-tools">
-              <button id="toggleCustomCategoryBtn" class="btn btn-ghost btn-small quick-inline-btn" type="button">+ Vlastní kategorie</button>
-            </div>
-          </div>
-
           <div class="form-group quick-title">
-            <label for="transactionTitle">Název</label>
-            <input type="text" id="transactionTitle" placeholder="Např. Potraviny" />
+            <label for="transactionTitle">Název transakce</label>
+            <input type="text" id="transactionTitle" placeholder="Např. Potraviny, Výplata nebo ETF" />
           </div>
 
           <div class="form-group quick-amount">
             <label for="transactionAmount">Částka</label>
-            <input type="number" id="transactionAmount" placeholder="0" min="0" step="0.01" />
+            <input type="number" id="transactionAmount" placeholder="0 Kč" min="0" step="0.01" />
           </div>
 
           <div class="form-group quick-date">
@@ -116,15 +162,23 @@
             <input type="date" id="transactionDate" />
           </div>
 
-          <div class="form-group quick-note">
-            <label for="transactionNote">Poznámka</label>
-            <input type="text" id="transactionNote" placeholder="Volitelná poznámka..." />
+          <div class="form-group quick-category">
+            <label for="transactionCategory">Kategorie</label>
+            <div class="quick-category-row">
+              <select id="transactionCategory">
+                <option value="">Vyber kategorii transakce</option>
+              </select>
+              <div class="quick-category-tools">
+                <button id="toggleCustomCategoryBtn" class="btn btn-ghost btn-small quick-inline-btn" type="button">Vlastní</button>
+              </div>
+            </div>
           </div>
+          <input type="hidden" id="transactionNote" value="" />
 
           <div class="custom-category-panel hidden" id="customCategoryPanel">
             <div class="form-group custom-category-input-group">
-              <label for="customCategoryInput">Nová kategorie</label>
-              <input type="text" id="customCategoryInput" placeholder="Např. Veterina nebo Kurzy" />
+              <label for="customCategoryInput">Název nové kategorie</label>
+              <input type="text" id="customCategoryInput" placeholder="Např. Veterina, Kurzy nebo Servis auta" />
             </div>
             <div class="custom-category-actions">
               <button id="saveCustomCategoryBtn" class="btn btn-gold btn-small" type="button">Uložit kategorii</button>
@@ -135,15 +189,15 @@
             <div class="quick-category-chips" id="quickCategoryChips"></div>
 
             <div class="quick-footer-actions">
-              <button type="reset" class="btn btn-ghost btn-small">Vyčistit</button>
-              <button type="submit" class="btn btn-gold btn-small">Přidat</button>
+              <button type="reset" class="btn btn-ghost btn-small">Vymazat</button>
+              <button type="submit" class="btn btn-gold btn-small">Uložit pohyb</button>
             </div>
           </div>
         </div>
       </form>
     </section>
 
-    <section class="analytics-grid top-analytics-grid">
+    <section class="analytics-grid">
       <article class="glass-card ratio-card premium-chart-card premium-chart-card-main">
         <div class="section-head compact-head">
           <div>
@@ -204,18 +258,18 @@
       <article class="glass-card chart-card premium-chart-card premium-chart-card-side">
         <div class="section-head">
           <div>
-            <h2>Struktura výdajů</h2>
+            <h2>Struktura výdajů, investic a desátků</h2>
           </div>
         </div>
         <div class="expense-donut-layout">
           <div class="canvas-wrap expense-donut-wrap">
             <canvas id="expenseDonutChart"></canvas>
           </div>
-          <div>
+          <div class="expense-donut-side">
             <div class="expense-donut-legend" id="expenseDonutLegend"></div>
-            <div class="expense-donut-highlights" id="expenseDonutHighlights"></div>
           </div>
         </div>
+        <div class="expense-donut-highlights" id="expenseDonutHighlights"></div>
       </article>
     </section>
 
@@ -379,6 +433,35 @@
       <div class="month-calendar-grid" id="monthCalendarGrid"></div>
     </section>
 
+    <section class="glass-card planner-card">
+      <div class="section-head compact-head planner-head">
+        <div>
+          <h2>Plán Vs. Skutečnost</h2>
+          <p>Živý měsíční přehled podle rozpočtů, opakovaných plateb a reálných transakcí.</p>
+        </div>
+      </div>
+
+      <div class="planner-kpis" id="plannerKpis"></div>
+
+      <div class="planner-grid">
+        <article class="planner-panel">
+          <div class="planner-panel-head">
+            <h3>Rozpočty kategorií</h3>
+            <span id="plannerBudgetMeta">Bez limitů</span>
+          </div>
+          <div class="planner-budget-list" id="plannerBudgetRows"></div>
+        </article>
+
+        <article class="planner-panel">
+          <div class="planner-panel-head">
+            <h3>Opakované pohyby</h3>
+            <span id="plannerRecurringMeta">Bez plánů</span>
+          </div>
+          <div class="planner-recurring-list" id="plannerRecurringRows"></div>
+        </article>
+      </div>
+    </section>
+
     <section class="glass-card transactions-section">
       <div class="transactions-topbar">
         <div>
@@ -396,7 +479,7 @@
           <strong id="transactionsCount">0</strong>
         </div>
         <div class="summary-mini-card">
-          <span>Výdaje</span>
+          <span>Výdaje + investice</span>
           <strong id="transactionsExpenseTotal">0 Kč</strong>
         </div>
         <div class="summary-mini-card">
@@ -566,8 +649,94 @@
     </div>
   </div>
 
+  <div id="changePasswordModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-password-modal="true"></div>
+    <div class="modal-dialog glass-card" role="dialog" aria-modal="true" aria-labelledby="changePasswordTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="changePasswordTitle">Změnit heslo</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeChangePasswordModal" aria-label="Zavřít">×</button>
+      </div>
+
+      <form id="changePasswordForm" class="modal-form">
+        <div class="modal-grid">
+          <div class="form-group">
+            <label for="currentPasswordInput">Současné heslo</label>
+            <input type="password" id="currentPasswordInput" autocomplete="current-password" />
+          </div>
+
+          <div class="form-group">
+            <label for="newPasswordInput">Nové heslo</label>
+            <input type="password" id="newPasswordInput" autocomplete="new-password" />
+          </div>
+
+          <div class="form-group modal-note-field">
+            <label for="confirmPasswordInput">Potvrzení nového hesla</label>
+            <input type="password" id="confirmPasswordInput" autocomplete="new-password" />
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-small" id="cancelChangePassword">Zrušit</button>
+          <button type="submit" class="btn btn-gold btn-small">Uložit nové heslo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="editAdminUserModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-admin-edit-modal="true"></div>
+    <div class="modal-dialog glass-card" role="dialog" aria-modal="true" aria-labelledby="editAdminUserTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="editAdminUserTitle">Upravit uživatele</h2>
+        </div>
+        <button type="button" class="modal-close-btn" id="closeEditAdminUserModal" aria-label="Zavřít">×</button>
+      </div>
+
+      <form id="editAdminUserForm" class="modal-form">
+        <input type="hidden" id="editAdminUserId" value="" />
+
+        <div class="modal-grid">
+          <div class="form-group">
+            <label for="editAdminUserName">Jméno</label>
+            <input type="text" id="editAdminUserName" />
+          </div>
+
+          <div class="form-group">
+            <label for="editAdminUserEmail">Email</label>
+            <input type="email" id="editAdminUserEmail" />
+          </div>
+
+          <div class="form-group">
+            <label for="editAdminUserRole">Role</label>
+            <select id="editAdminUserRole">
+              <option value="USER">Uživatel</option>
+              <option value="ADMIN">Administrátor</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editAdminUserActive">Stav</label>
+            <select id="editAdminUserActive">
+              <option value="true">Aktivní</option>
+              <option value="false">Deaktivovaný</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost btn-small" id="cancelEditAdminUser">Zrušit</button>
+          <button type="submit" class="btn btn-gold btn-small">Uložit uživatele</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="toastContainer" class="toast-container"></div>
   <datalist id="transactionCategoryOptions"></datalist>
+  <script src="app-api.js"></script>
   <script src="dashboard.js"></script>
 </body>
 </html>

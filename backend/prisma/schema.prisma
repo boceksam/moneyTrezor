@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String           @id @default(cuid())
+  email            String           @unique
+  passwordHash     String
+  name             String?
+  role             UserRole         @default(USER)
+  active           Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  transactions     Transaction[]
+  budgets          Budget[]
+  goals            Goal[]
+  recurringPlans   RecurringPlan[]
+  customCategories CustomCategory[]
+}
+
+model Transaction {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  amount    Decimal  @db.Decimal(12, 2)
+  type      TransactionType
+  category  String
+  date      DateTime
+  note      String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model Budget {
+  id          String   @id @default(cuid())
+  userId      String
+  category    String
+  limitAmount Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+}
+
+model Goal {
+  id                  String   @id @default(cuid())
+  userId              String
+  name                String
+  target              Decimal  @db.Decimal(12, 2)
+  current             Decimal  @db.Decimal(12, 2)
+  monthlyContribution Decimal  @db.Decimal(12, 2)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RecurringPlan {
+  id         String          @id @default(cuid())
+  userId     String
+  title      String
+  amount     Decimal         @db.Decimal(12, 2)
+  type       TransactionType
+  category   String
+  dayOfMonth Int
+  lastUsedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model CustomCategory {
+  id        String              @id @default(cuid())
+  userId    String
+  name      String
+  type      CustomCategoryType
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, name, type])
+}
+
+enum TransactionType {
+  expense
+  income
+  investment
+  tithe
+}
+
+enum CustomCategoryType {
+  expense
+  income
+  investment
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
